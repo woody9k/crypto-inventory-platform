@@ -1,0 +1,372 @@
+version: '3.8'
+
+services:
+  # =================================================================
+  # Database Services
+  # =================================================================
+  postgres:
+    image: postgres:15-alpine
+    container_name: crypto-postgres
+    environment:
+      POSTGRES_DB: crypto_inventory
+      POSTGRES_USER: crypto_user
+      POSTGRES_PASSWORD: crypto_pass_dev
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./scripts/database/migrations.sql:/docker-entrypoint-initdb.d/02-migrations.sql
+      - ./scripts/database/seed.sql:/docker-entrypoint-initdb.d/03-seed.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crypto_user -d crypto_inventory"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - crypto-network
+
+  influxdb:
+    image: influxdb:2.7-alpine
+    container_name: crypto-influxdb
+    environment:
+      DOCKER_INFLUXDB_INIT_MODE: setup
+      DOCKER_INFLUXDB_INIT_USERNAME: admin
+      DOCKER_INFLUXDB_INIT_PASSWORD: adminpass123
+      DOCKER_INFLUXDB_INIT_ORG: crypto-inventory
+      DOCKER_INFLUXDB_INIT_BUCKET: metrics
+      DOCKER_INFLUXDB_INIT_ADMIN_TOKEN: dev-token-1234567890
+    volumes:
+      - influx_data:/var/lib/influxdb2
+      - influx_config:/etc/influxdb2
+    ports:
+      - "8086:8086"
+    healthcheck:
+      test: ["CMD", "influx", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - crypto-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: crypto-redis
+    command: redis-server --appendonly yes --requirepass redis_pass_dev
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "redis_pass_dev", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - crypto-network
+
+  # =================================================================
+  # Message Queue
+  # =================================================================
+  nats:
+    image: nats:2.10-alpine
+    container_name: crypto-nats
+    command: ["-js", "-m", "8222", "--user", "nats_user", "--pass", "nats_pass_dev"]
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8222/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - crypto-network
+
+  # =================================================================
+  # Backend Services
+  # =================================================================
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile.dev
+    container_name: crypto-auth-service
+    environment:
+      - PORT=8080
+      - ENV=development
+      - DATABASE_URL=postgres://crypto_user:crypto_pass_dev@postgres:5432/crypto_inventory?sslmode=disable
+      - REDIS_URL=redis://:redis_pass_dev@redis:6379/0
+      - JWT_SECRET=dev-secret-key-change-in-production
+      - JWT_EXPIRY=24h
+      - LOG_LEVEL=debug
+      - CORS_ORIGINS=http://localhost:3000
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/auth-service:/app
+      - /app/vendor
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  inventory-service:
+    build:
+      context: ./services/inventory-service
+      dockerfile: Dockerfile.dev
+    container_name: crypto-inventory-service
+    environment:
+      - PORT=8080
+      - ENV=development
+      - DATABASE_URL=postgres://crypto_user:crypto_pass_dev@postgres:5432/crypto_inventory?sslmode=disable
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=dev-token-1234567890
+      - INFLUXDB_ORG=crypto-inventory
+      - INFLUXDB_BUCKET=metrics
+      - NATS_URL=nats://nats_user:nats_pass_dev@nats:4222
+      - LOG_LEVEL=debug
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/inventory-service:/app
+      - /app/vendor
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  compliance-engine:
+    build:
+      context: ./services/compliance-engine
+      dockerfile: Dockerfile.dev
+    container_name: crypto-compliance-engine
+    environment:
+      - PORT=8080
+      - ENV=development
+      - DATABASE_URL=postgres://crypto_user:crypto_pass_dev@postgres:5432/crypto_inventory?sslmode=disable
+      - NATS_URL=nats://nats_user:nats_pass_dev@nats:4222
+      - LOG_LEVEL=debug
+    ports:
+      - "8083:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/compliance-engine:/app
+      - /app/vendor
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  report-generator:
+    build:
+      context: ./services/report-generator
+      dockerfile: Dockerfile.dev
+    container_name: crypto-report-generator
+    environment:
+      - PORT=8080
+      - ENV=development
+      - DATABASE_URL=postgres://crypto_user:crypto_pass_dev@postgres:5432/crypto_inventory?sslmode=disable
+      - FILE_STORAGE_PATH=/app/reports
+      - NATS_URL=nats://nats_user:nats_pass_dev@nats:4222
+      - LOG_LEVEL=debug
+    ports:
+      - "8084:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/report-generator:/app
+      - /app/vendor
+      - report_storage:/app/reports
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  sensor-manager:
+    build:
+      context: ./services/sensor-manager
+      dockerfile: Dockerfile.dev
+    container_name: crypto-sensor-manager
+    environment:
+      - PORT=8080
+      - ENV=development
+      - DATABASE_URL=postgres://crypto_user:crypto_pass_dev@postgres:5432/crypto_inventory?sslmode=disable
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=dev-token-1234567890
+      - INFLUXDB_ORG=crypto-inventory
+      - INFLUXDB_BUCKET=metrics
+      - NATS_URL=nats://nats_user:nats_pass_dev@nats:4222
+      - LOG_LEVEL=debug
+    ports:
+      - "8085:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/sensor-manager:/app
+      - /app/vendor
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  ai-analysis-service:
+    build:
+      context: ./services/ai-analysis-service
+      dockerfile: Dockerfile.dev
+    container_name: crypto-ai-analysis-service
+    environment:
+      - PORT=8080
+      - ENV=development
+      - DATABASE_URL=postgres://crypto_user:crypto_pass_dev@postgres:5432/crypto_inventory?sslmode=disable
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=dev-token-1234567890
+      - INFLUXDB_ORG=crypto-inventory
+      - INFLUXDB_BUCKET=metrics
+      - NATS_URL=nats://nats_user:nats_pass_dev@nats:4222
+      - MODEL_PATH=/app/models
+      - LOG_LEVEL=debug
+      - PYTHONPATH=/app
+    ports:
+      - "8087:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/ai-analysis-service:/app
+      - ai_models:/app/models
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  # =================================================================
+  # API Gateway
+  # =================================================================
+  api-gateway:
+    image: nginx:alpine
+    container_name: crypto-api-gateway
+    ports:
+      - "8080:80"
+    volumes:
+      - ./config/nginx/dev.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - auth-service
+      - inventory-service
+      - compliance-engine
+      - report-generator
+      - sensor-manager
+      - ai-analysis-service
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  # =================================================================
+  # Frontend
+  # =================================================================
+  web-ui:
+    build:
+      context: ./web-ui
+      dockerfile: Dockerfile.dev
+    container_name: crypto-web-ui
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+      - REACT_APP_WS_URL=ws://localhost:8080
+      - REACT_APP_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./web-ui:/app
+      - /app/node_modules
+    depends_on:
+      - api-gateway
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
+  # =================================================================
+  # Development Tools
+  # =================================================================
+  adminer:
+    image: adminer:latest
+    container_name: crypto-adminer
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DEFAULT_USERNAME: crypto_user
+      ADMINER_DEFAULT_DATABASE: crypto_inventory
+    ports:
+      - "8090:8080"
+    depends_on:
+      - postgres
+    networks:
+      - crypto-network
+
+  grafana:
+    image: grafana/grafana:10.0.0
+    container_name: crypto-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_INSTALL_PLUGINS=grafana-influxdb-datasource
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - influxdb
+    networks:
+      - crypto-network
+
+# =================================================================
+# Volumes
+# =================================================================
+volumes:
+  postgres_data:
+    driver: local
+  influx_data:
+    driver: local
+  influx_config:
+    driver: local
+  redis_data:
+    driver: local
+  report_storage:
+    driver: local
+  ai_models:
+    driver: local
+  grafana_data:
+    driver: local
+
+# =================================================================
+# Networks
+# =================================================================
+networks:
+  crypto-network:
+    driver: bridge
+    name: crypto-inventory-network

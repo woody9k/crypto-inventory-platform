@@ -1,0 +1,63 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+bin/
+dist/
+
+# Go workspace file
+go.work
+vendor/
+
+# Environment variables
+.env
+.env.local
+.env.*
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Logs
+logs/
+*.log
+
+# Node modules
+node_modules/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Database files
+*.sqlite3
+*.db
+
+# Application specific
+config/local/
+temp/
+tmp/
+reports/
+models/
+*.key
+*.pem
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Docker volumes
+postgres_data/
+influx_data/
+redis_data/
