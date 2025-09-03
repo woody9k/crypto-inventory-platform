@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📖 Documentation
+    url: https://github.com/democorp/crypto-inventory-platform/tree/main/architecture_docs
+    about: Check our comprehensive architecture documentation
+  - name: 💬 Discussions
+    url: https://github.com/democorp/crypto-inventory-platform/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 🚀 Project Board
+    url: https://github.com/democorp/crypto-inventory-platform/projects
+    about: View current development progress and roadmap

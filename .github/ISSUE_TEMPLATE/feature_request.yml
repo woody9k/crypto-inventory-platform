@@ -1,0 +1,94 @@
+name: 🚀 Feature Request
+description: Suggest a new feature or enhancement for the Crypto Inventory Platform
+title: "[FEATURE] "
+labels: ["enhancement", "needs-triage"]
+projects: ["democorp/crypto-inventory-platform"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to suggest a new feature! Please fill out the form below.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component does this feature request relate to?
+      options:
+        - Authentication Service
+        - Inventory Service
+        - Compliance Engine
+        - Report Generator
+        - Sensor Manager
+        - Integration Service
+        - AI Analysis Service
+        - Network Sensor
+        - Web Frontend
+        - Documentation
+        - Infrastructure
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature for the MVP/business goals?
+      options:
+        - Critical (MVP blocker)
+        - High (Important for MVP)
+        - Medium (Nice to have for MVP)
+        - Low (Post-MVP)
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: What problem does this feature solve? What's the business value?
+      placeholder: Describe the problem or opportunity this feature addresses...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your proposed solution in detail
+      placeholder: Describe how you'd like this feature to work...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered any alternative solutions or features?
+      placeholder: Describe any alternative approaches you've considered...
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance Criteria
+      description: What are the specific requirements for this feature to be considered complete?
+      placeholder: |
+        - [ ] Criterion 1
+        - [ ] Criterion 2
+        - [ ] Criterion 3
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: considerations
+    attributes:
+      label: Additional Considerations
+      options:
+        - label: This feature requires API changes
+        - label: This feature requires database schema changes
+        - label: This feature requires UI/UX design
+        - label: This feature affects security
+        - label: This feature affects performance
+        - label: This feature requires documentation updates

@@ -1,0 +1,120 @@
+name: 🐛 Bug Report
+description: Report a bug in the Crypto Inventory Platform
+title: "[BUG] "
+labels: ["bug", "needs-triage"]
+projects: ["democorp/crypto-inventory-platform"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug! Please fill out the form below to help us resolve the issue quickly.
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component is affected by this bug?
+      options:
+        - Authentication Service
+        - Inventory Service
+        - Compliance Engine
+        - Report Generator
+        - Sensor Manager
+        - Integration Service
+        - AI Analysis Service
+        - Network Sensor
+        - Web Frontend
+        - Database
+        - Infrastructure
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this bug?
+      options:
+        - Critical (System down, data loss)
+        - High (Major feature broken)
+        - Medium (Feature partially broken)
+        - Low (Minor issue, workaround available)
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is
+      placeholder: Describe what happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Go to '...'
+        2. Click on '...'
+        3. Scroll down to '...'
+        4. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: A clear and concise description of what you expected to happen
+      placeholder: Describe what should have happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: A clear and concise description of what actually happened
+      placeholder: Describe what actually happened...
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Please provide details about your environment
+      placeholder: |
+        - OS: [e.g., Ubuntu 22.04]
+        - Browser: [e.g., Chrome 120]
+        - Go Version: [e.g., 1.21]
+        - Docker Version: [e.g., 24.0.7]
+        - Service Version: [e.g., v1.0.0]
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs and Error Messages
+      description: Please paste any relevant logs or error messages
+      render: shell
+      placeholder: Paste logs here...
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: If applicable, add screenshots to help explain your problem
+      placeholder: Drag and drop screenshots here...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the problem here
+      placeholder: Any additional information that might be helpful...
