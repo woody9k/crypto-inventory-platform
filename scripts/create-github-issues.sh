@@ -51,11 +51,17 @@ check_gh_cli() {
 create_milestones() {
     log_info "Creating project milestones..."
     
+    # Calculate dates relative to today
+    phase1_date=$(date -d "+8 weeks" -u +"%Y-%m-%dT23:59:59Z")
+    phase2_date=$(date -d "+12 weeks" -u +"%Y-%m-%dT23:59:59Z")
+    phase3_date=$(date -d "+16 weeks" -u +"%Y-%m-%dT23:59:59Z")
+    phase4_date=$(date -d "+20 weeks" -u +"%Y-%m-%dT23:59:59Z")
+    
     milestones=(
-        "Phase 1: Foundation|MVP Core - Authentication, Sensors, Basic Discovery|2024-03-01"
-        "Phase 2: Intelligence|AI Analysis and Compliance Framework|2024-04-01"
-        "Phase 3: Enterprise|Integration Hub and Advanced Features|2024-05-01"
-        "Phase 4: Scale|Production Ready and Polish|2024-06-01"
+        "Phase 1: Foundation|MVP Core - Authentication, Sensors, Basic Discovery|$phase1_date"
+        "Phase 2: Intelligence|AI Analysis and Compliance Framework|$phase2_date"
+        "Phase 3: Enterprise|Integration Hub and Advanced Features|$phase3_date"
+        "Phase 4: Scale|Production Ready and Polish|$phase4_date"
     )
     
     for milestone_data in "${milestones[@]}"; do
@@ -78,6 +84,7 @@ create_labels() {
     log_info "Creating project labels..."
     
     labels=(
+        "task|Development Task|0e8a16"
         "mvp|Critical for MVP|e11d21"
         "authentication|Authentication Service|0052cc"
         "inventory|Inventory Service|1d76db"
@@ -92,6 +99,7 @@ create_labels() {
         "security|Security Related|b60205"
         "performance|Performance Related|0e8a16"
         "documentation|Documentation|c5def5"
+        "testing|Testing Related|c5def5"
         "critical|Critical Priority|b60205"
         "high|High Priority|d93f0b"
         "medium|Medium Priority|fbca04"
@@ -144,8 +152,7 @@ Develop core authentication service with JWT tokens, multi-tenant support, and b
 
 ## Estimate
 1 week" \
-        --label "task,authentication,critical,mvp" \
-        --milestone "Phase 1: Foundation"
+        --label "task,authentication,critical,mvp"
 
     # Issue 2: Cross-Platform Network Sensor
     gh issue create \
