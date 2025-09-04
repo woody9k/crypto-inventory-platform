@@ -51,9 +51,45 @@ This directory contains comprehensive architecture documentation for the crypto 
 ### 🤖 [07_ai_agent_handoff_guide.md](./07_ai_agent_handoff_guide.md)
 **Complete Context for AI Continuation**
 - Project summary and technical decisions
-- Implementation strategy and development phases
-- Troubleshooting guides and next steps
-- Comprehensive handoff documentation
+- Architecture overview and technology stack
+- Business context and implementation strategy
+
+### 🎨 [08_ui_ux_specification.md](./08_ui_ux_specification.md)
+**User Interface Design Specification**
+- Comprehensive UI design and user experience
+- Dashboard layouts and component specifications
+- Sensor management interface design
+
+### 🔗 [09_integration_architecture.md](./09_integration_architecture.md)
+**Integration Architecture Guide**
+- ITAM system integration patterns
+- Third-party connector framework
+- Data synchronization strategies
+
+### 🔐 [10_authentication_service_decisions.md](./10_authentication_service_decisions.md)
+**Authentication Service Architecture**
+- Multi-tenant authentication design
+- Freemium model and subscription tiers
+- Security patterns and implementation
+
+### 🔑 [11_authentication_service_technical_spec.md](./11_authentication_service_technical_spec.md)
+**Authentication Technical Specification**
+- Complete authentication service implementation
+- Database schemas and API specifications
+- Security controls and compliance features
+
+### 🎯 [12_frontend_flexibility_analysis.md](./12_frontend_flexibility_analysis.md)
+**Frontend Architecture Analysis**
+- Frontend flexibility and scalability patterns
+- Component architecture decisions
+- API design for frontend integration
+
+### 📡 [13_network_sensor_technical_specification.md](./13_network_sensor_technical_specification.md)
+**Network Sensor Technical Specification**
+- Complete sensor agent architecture and design
+- Cross-platform deployment and installation
+- Authentication, security, and resource management
+- Discovery methods and data processing
 
 ## Quick Start
 

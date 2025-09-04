@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/democorp/crypto-inventory/services/auth-service/internal/auth"
 	"github.com/democorp/crypto-inventory/services/auth-service/internal/config"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -60,7 +61,7 @@ func Logging() gin.HandlerFunc {
 }
 
 // RequireAuth validates JWT tokens and sets user context
-func RequireAuth(cfg *config.Config) gin.HandlerFunc {
+func RequireAuth(cfg *config.Config, jwtService *auth.JWTService) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get token from Authorization header
 		authHeader := c.GetHeader("Authorization")
@@ -81,14 +82,32 @@ func RequireAuth(cfg *config.Config) gin.HandlerFunc {
 			return
 		}
 
-		// TODO: Validate JWT token and extract user information
-		// token := authHeader[7:] // Will be used for JWT validation
-		_ = authHeader[7:] // Acknowledge we have the token but not using it yet
+		token := authHeader[7:]
 
-		// For now, we'll just set a placeholder user
-		c.Set("userID", "550e8400-e29b-41d4-a716-446655440001")
-		c.Set("tenantID", "550e8400-e29b-41d4-a716-446655440000")
-		c.Set("role", "admin")
+		// Validate JWT token
+		claims, err := jwtService.ValidateToken(token)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid or expired token",
+			})
+			c.Abort()
+			return
+		}
+
+		// Ensure it's an access token
+		if claims.Type != "access" {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Invalid token type",
+			})
+			c.Abort()
+			return
+		}
+
+		// Set user context
+		c.Set("userID", claims.UserID.String())
+		c.Set("tenantID", claims.TenantID.String())
+		c.Set("role", claims.Role)
+		c.Set("email", claims.Email)
 
 		c.Next()
 	}

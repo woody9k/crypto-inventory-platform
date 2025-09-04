@@ -3,7 +3,9 @@ package api
 import (
 	"database/sql"
 	"net/http"
+	"time"
 
+	"github.com/democorp/crypto-inventory/services/auth-service/internal/auth"
 	"github.com/democorp/crypto-inventory/services/auth-service/internal/config"
 	"github.com/democorp/crypto-inventory/services/auth-service/internal/middleware"
 	"github.com/gin-contrib/cors"
@@ -14,6 +16,15 @@ import (
 // SetupRouter initializes and configures the Gin router
 func SetupRouter(cfg *config.Config, db *sql.DB, redis *redis.Client) *gin.Engine {
 	router := gin.New()
+
+	// Initialize JWT service
+	jwtService := auth.NewJWTService(cfg.JWTSecret, cfg.JWTExpiry, 7*24*time.Hour) // 7 days refresh expiry
+
+	// Initialize auth service
+	authService := auth.NewAuthService(db, redis, jwtService)
+
+	// Initialize handlers
+	authHandlers := NewAuthHandlers(authService, cfg)
 
 	// Middleware
 	router.Use(gin.Logger())
@@ -43,18 +54,18 @@ func SetupRouter(cfg *config.Config, db *sql.DB, redis *redis.Client) *gin.Engin
 		auth := v1.Group("/auth")
 		{
 			// Basic authentication
-			auth.POST("/register", registerHandler(cfg, db))
-			auth.POST("/verify-email", verifyEmailHandler(db))
-			auth.POST("/login", loginHandler(cfg, db, redis))
-			auth.POST("/logout", middleware.RequireAuth(cfg), logoutHandler(redis))
-			auth.POST("/refresh", refreshTokenHandler(cfg, redis))
-			auth.POST("/forgot-password", forgotPasswordHandler(db))
-			auth.POST("/reset-password", resetPasswordHandler(db))
+			auth.POST("/register", authHandlers.Register)
+			auth.POST("/verify-email", authHandlers.VerifyEmail)
+			auth.POST("/login", authHandlers.Login)
+			auth.POST("/logout", middleware.RequireAuth(cfg, jwtService), authHandlers.Logout)
+			auth.POST("/refresh", authHandlers.RefreshToken)
+			auth.POST("/forgot-password", authHandlers.ForgotPassword)
+			auth.POST("/reset-password", authHandlers.ResetPassword)
 
 			// Current user management
-			auth.GET("/me", middleware.RequireAuth(cfg), getMeHandler(db))
-			auth.PUT("/me", middleware.RequireAuth(cfg), updateMeHandler(db))
-			auth.POST("/change-password", middleware.RequireAuth(cfg), changePasswordHandler(db))
+			auth.GET("/me", middleware.RequireAuth(cfg, jwtService), authHandlers.GetMe)
+			auth.PUT("/me", middleware.RequireAuth(cfg, jwtService), authHandlers.UpdateMe)
+			auth.POST("/change-password", middleware.RequireAuth(cfg, jwtService), authHandlers.ChangePassword)
 
 			// Flexible authentication flow (frontend-agnostic)
 			auth.POST("/initiate", authInitiateHandler(db))
@@ -68,14 +79,14 @@ func SetupRouter(cfg *config.Config, db *sql.DB, redis *redis.Client) *gin.Engin
 		{
 			authSSO.GET("/:provider/authorize", ssoAuthorizeHandler(cfg, db))
 			authSSO.GET("/:provider/callback", ssoCallbackHandler(cfg, db, redis))
-			authSSO.POST("/link", middleware.RequireAuth(cfg), ssoLinkHandler(db))
-			authSSO.DELETE("/unlink", middleware.RequireAuth(cfg), ssoUnlinkHandler(db))
+			authSSO.POST("/link", middleware.RequireAuth(cfg, jwtService), ssoLinkHandler(db))
+			authSSO.DELETE("/unlink", middleware.RequireAuth(cfg, jwtService), ssoUnlinkHandler(db))
 			authSSO.GET("/providers", ssoProvidersHandler(db))
 		}
 
 		// User management routes (admin only)
 		users := v1.Group("/users")
-		users.Use(middleware.RequireAuth(cfg))
+		users.Use(middleware.RequireAuth(cfg, jwtService))
 		users.Use(middleware.RequireRole("admin"))
 		{
 			users.GET("", listUsersHandler(db))
@@ -87,7 +98,7 @@ func SetupRouter(cfg *config.Config, db *sql.DB, redis *redis.Client) *gin.Engin
 
 		// Current tenant management routes
 		tenant := v1.Group("/tenant")
-		tenant.Use(middleware.RequireAuth(cfg))
+		tenant.Use(middleware.RequireAuth(cfg, jwtService))
 		{
 			tenant.GET("", getCurrentTenantHandler(db))
 			tenant.PUT("", middleware.RequireRole("admin"), updateCurrentTenantHandler(db))
@@ -98,7 +109,7 @@ func SetupRouter(cfg *config.Config, db *sql.DB, redis *redis.Client) *gin.Engin
 
 		// Frontend flexibility: UI configuration routes
 		ui := v1.Group("/ui")
-		ui.Use(middleware.RequireAuth(cfg))
+		ui.Use(middleware.RequireAuth(cfg, jwtService))
 		{
 			ui.GET("/config", getUIConfigHandler(db))
 			ui.GET("/config/tenant", getTenantUIConfigHandler(db))
@@ -109,7 +120,7 @@ func SetupRouter(cfg *config.Config, db *sql.DB, redis *redis.Client) *gin.Engin
 
 		// SSO configuration routes (admin only)
 		ssoConfig := v1.Group("/tenant/sso")
-		ssoConfig.Use(middleware.RequireAuth(cfg))
+		ssoConfig.Use(middleware.RequireAuth(cfg, jwtService))
 		ssoConfig.Use(middleware.RequireRole("admin"))
 		{
 			ssoConfig.GET("/providers", listSSOProvidersHandler(db))
@@ -121,7 +132,7 @@ func SetupRouter(cfg *config.Config, db *sql.DB, redis *redis.Client) *gin.Engin
 
 		// Billing and subscription routes
 		billing := v1.Group("/billing")
-		billing.Use(middleware.RequireAuth(cfg))
+		billing.Use(middleware.RequireAuth(cfg, jwtService))
 		{
 			billing.GET("/tiers", getSubscriptionTiersHandler(db))
 			billing.GET("/usage/current", getCurrentUsageHandler(db))
@@ -131,14 +142,14 @@ func SetupRouter(cfg *config.Config, db *sql.DB, redis *redis.Client) *gin.Engin
 
 		// Feature availability routes
 		features := v1.Group("/features")
-		features.Use(middleware.RequireAuth(cfg))
+		features.Use(middleware.RequireAuth(cfg, jwtService))
 		{
 			features.GET("/availability", getFeatureAvailabilityHandler(db))
 		}
 
 		// Frontend flexibility: Workflow management routes
 		workflows := v1.Group("/workflows")
-		workflows.Use(middleware.RequireAuth(cfg))
+		workflows.Use(middleware.RequireAuth(cfg, jwtService))
 		{
 			workflows.GET("/onboarding", getOnboardingWorkflowHandler(db))
 			workflows.POST("/onboarding/:step", completeOnboardingStepHandler(db))
@@ -184,343 +195,5 @@ func readinessCheck(db *sql.DB, redis *redis.Client) gin.HandlerFunc {
 			"status":  "ready",
 			"service": "auth-service",
 		})
-	}
-}
-
-// ================================
-// HANDLER IMPLEMENTATIONS
-// ================================
-// These will be moved to separate files as they grow
-
-// Authentication handlers
-func registerHandler(cfg *config.Config, db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Register endpoint - to be implemented"})
-	}
-}
-
-func verifyEmailHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Verify email endpoint - to be implemented"})
-	}
-}
-
-func loginHandler(cfg *config.Config, db *sql.DB, redis *redis.Client) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Login endpoint - to be implemented"})
-	}
-}
-
-func logoutHandler(redis *redis.Client) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Logout endpoint - to be implemented"})
-	}
-}
-
-func refreshTokenHandler(cfg *config.Config, redis *redis.Client) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Refresh token endpoint - to be implemented"})
-	}
-}
-
-func getMeHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get me endpoint - to be implemented"})
-	}
-}
-
-func initiateSSOHandler() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "SSO initiate endpoint - to be implemented"})
-	}
-}
-
-func ssoCallbackHandler() gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "SSO callback endpoint - to be implemented"})
-	}
-}
-
-func listUsersHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "List users endpoint - to be implemented"})
-	}
-}
-
-func createUserHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Create user endpoint - to be implemented"})
-	}
-}
-
-func getUserHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get user endpoint - to be implemented"})
-	}
-}
-
-func updateUserHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Update user endpoint - to be implemented"})
-	}
-}
-
-func deleteUserHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Delete user endpoint - to be implemented"})
-	}
-}
-
-func listTenantsHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "List tenants endpoint - to be implemented"})
-	}
-}
-
-func createTenantHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Create tenant endpoint - to be implemented"})
-	}
-}
-
-func getTenantHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get tenant endpoint - to be implemented"})
-	}
-}
-
-func updateTenantHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Update tenant endpoint - to be implemented"})
-	}
-}
-
-// Additional authentication handlers
-func forgotPasswordHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Forgot password endpoint - to be implemented"})
-	}
-}
-
-func resetPasswordHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Reset password endpoint - to be implemented"})
-	}
-}
-
-func updateMeHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Update me endpoint - to be implemented"})
-	}
-}
-
-func changePasswordHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Change password endpoint - to be implemented"})
-	}
-}
-
-// Flexible authentication flow handlers
-func authInitiateHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Auth initiate endpoint - to be implemented"})
-	}
-}
-
-func authMethodsHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Auth methods endpoint - to be implemented"})
-	}
-}
-
-func authenticateHandler(cfg *config.Config, db *sql.DB, redis *redis.Client) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Authenticate endpoint - to be implemented"})
-	}
-}
-
-func authCompleteHandler(cfg *config.Config, db *sql.DB, redis *redis.Client) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Auth complete endpoint - to be implemented"})
-	}
-}
-
-// SSO handlers
-func ssoAuthorizeHandler(cfg *config.Config, db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "SSO authorize endpoint - to be implemented"})
-	}
-}
-
-func ssoCallbackHandler(cfg *config.Config, db *sql.DB, redis *redis.Client) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "SSO callback endpoint - to be implemented"})
-	}
-}
-
-func ssoLinkHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "SSO link endpoint - to be implemented"})
-	}
-}
-
-func ssoUnlinkHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "SSO unlink endpoint - to be implemented"})
-	}
-}
-
-func ssoProvidersHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "SSO providers endpoint - to be implemented"})
-	}
-}
-
-// Tenant management handlers
-func getCurrentTenantHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get current tenant endpoint - to be implemented"})
-	}
-}
-
-func updateCurrentTenantHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Update current tenant endpoint - to be implemented"})
-	}
-}
-
-func getTenantUsageHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get tenant usage endpoint - to be implemented"})
-	}
-}
-
-func getTenantBillingHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get tenant billing endpoint - to be implemented"})
-	}
-}
-
-func upgradeTenantHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Upgrade tenant endpoint - to be implemented"})
-	}
-}
-
-// UI configuration handlers (frontend flexibility)
-func getUIConfigHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get UI config endpoint - to be implemented"})
-	}
-}
-
-func getTenantUIConfigHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get tenant UI config endpoint - to be implemented"})
-	}
-}
-
-func updateTenantUIConfigHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Update tenant UI config endpoint - to be implemented"})
-	}
-}
-
-func getUIThemesHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get UI themes endpoint - to be implemented"})
-	}
-}
-
-func updateBrandingHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Update branding endpoint - to be implemented"})
-	}
-}
-
-// SSO configuration handlers
-func listSSOProvidersHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "List SSO providers endpoint - to be implemented"})
-	}
-}
-
-func createSSOProviderHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Create SSO provider endpoint - to be implemented"})
-	}
-}
-
-func updateSSOProviderHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Update SSO provider endpoint - to be implemented"})
-	}
-}
-
-func deleteSSOProviderHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Delete SSO provider endpoint - to be implemented"})
-	}
-}
-
-func testSSOProviderHandler(cfg *config.Config, db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Test SSO provider endpoint - to be implemented"})
-	}
-}
-
-// Billing and subscription handlers
-func getSubscriptionTiersHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get subscription tiers endpoint - to be implemented"})
-	}
-}
-
-func getCurrentUsageHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get current usage endpoint - to be implemented"})
-	}
-}
-
-func getUsageHistoryHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get usage history endpoint - to be implemented"})
-	}
-}
-
-func checkLimitsHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Check limits endpoint - to be implemented"})
-	}
-}
-
-func getFeatureAvailabilityHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get feature availability endpoint - to be implemented"})
-	}
-}
-
-// Workflow management handlers (frontend flexibility)
-func getOnboardingWorkflowHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get onboarding workflow endpoint - to be implemented"})
-	}
-}
-
-func completeOnboardingStepHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Complete onboarding step endpoint - to be implemented"})
-	}
-}
-
-func getOnboardingProgressHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Get onboarding progress endpoint - to be implemented"})
-	}
-}
-
-func skipOnboardingStepHandler(db *sql.DB) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		c.JSON(http.StatusNotImplemented, gin.H{"message": "Skip onboarding step endpoint - to be implemented"})
 	}
 }
