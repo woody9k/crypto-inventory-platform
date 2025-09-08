@@ -212,7 +212,7 @@ func (a *AuthService) Logout(userID uuid.UUID) error {
 func (a *AuthService) GetUserByEmail(email string) (*models.User, error) {
 	query := `
 		SELECT id, tenant_id, email, password_hash, first_name, last_name, role, 
-		       active, email_verified, last_login_at, created_at, updated_at, deleted_at
+		       is_active, email_verified, last_login_at, created_at, updated_at, deleted_at
 		FROM users 
 		WHERE email = $1 AND deleted_at IS NULL`
 
@@ -238,7 +238,7 @@ func (a *AuthService) GetUserByEmail(email string) (*models.User, error) {
 func (a *AuthService) GetUserByID(userID uuid.UUID) (*models.User, error) {
 	query := `
 		SELECT id, tenant_id, email, password_hash, first_name, last_name, role, 
-		       active, email_verified, last_login_at, created_at, updated_at, deleted_at
+		       is_active, email_verified, last_login_at, created_at, updated_at, deleted_at
 		FROM users 
 		WHERE id = $1 AND deleted_at IS NULL`
 
@@ -263,7 +263,7 @@ func (a *AuthService) GetUserByID(userID uuid.UUID) (*models.User, error) {
 // createUser inserts a new user into the database
 func (a *AuthService) createUser(user *models.User) error {
 	query := `
-		INSERT INTO users (id, tenant_id, email, password_hash, first_name, last_name, role, active, email_verified, created_at, updated_at)
+		INSERT INTO users (id, tenant_id, email, password_hash, first_name, last_name, role, is_active, email_verified, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`
 
 	_, err := a.db.Exec(query,
@@ -280,25 +280,33 @@ func (a *AuthService) createTenant(name string) (*models.Tenant, error) {
 	tenantID := uuid.New()
 	slug := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(name), " ", "-"))
 
-	tenant := &models.Tenant{
-		ID:               tenantID,
-		Name:             name,
-		Slug:             slug,
-		SubscriptionTier: "basic",
-		MaxEndpoints:     100,
-		MaxUsers:         10,
-		Settings:         make(map[string]interface{}),
-		CreatedAt:        time.Now(),
-		UpdatedAt:        time.Now(),
+	// Get the 'free' subscription tier ID
+	var subscriptionTierID uuid.UUID
+	err := a.db.QueryRow("SELECT id FROM subscription_tiers WHERE name = 'free' LIMIT 1").Scan(&subscriptionTierID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get default subscription tier: %w", err)
 	}
 
+	tenant := &models.Tenant{
+		ID:                 tenantID,
+		Name:               name,
+		Slug:               slug,
+		SubscriptionTierID: subscriptionTierID,
+		BillingEmail:       "", // Will be set during registration
+		PaymentStatus:      "trial",
+		Settings:           make(map[string]interface{}),
+		CreatedAt:          time.Now(),
+		UpdatedAt:          time.Now(),
+	}
+
+	// Note: trial_ends_at is handled by the database trigger
 	query := `
-		INSERT INTO tenants (id, name, slug, subscription_tier, max_endpoints, max_users, settings, created_at, updated_at)
+		INSERT INTO tenants (id, name, slug, subscription_tier_id, billing_email, payment_status, settings, created_at, updated_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
-	_, err := a.db.Exec(query,
-		tenant.ID, tenant.Name, tenant.Slug, tenant.SubscriptionTier,
-		tenant.MaxEndpoints, tenant.MaxUsers, "{}", tenant.CreatedAt, tenant.UpdatedAt,
+	_, err = a.db.Exec(query,
+		tenant.ID, tenant.Name, tenant.Slug, tenant.SubscriptionTierID,
+		tenant.BillingEmail, tenant.PaymentStatus, "{}", tenant.CreatedAt, tenant.UpdatedAt,
 	)
 
 	if err != nil {

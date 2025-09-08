@@ -1,35 +1,39 @@
 # [MAIN PLATFORM] Development Progress & Handoff Notes
-*Last Updated: 2025-01-04*
+*Last Updated: 2025-01-09*
 *Development Lane: Core Platform Services (Not Network Sensor)*
 
 ## 🎯 Current Status Summary
 
-The main crypto inventory platform is **60% complete** with a functional authentication service, complete database schema, and Docker infrastructure. We're currently blocked on a minor database schema issue in the user registration flow.
+The main crypto inventory platform is **65% complete** with a **fully functional authentication service**, complete database schema, and Docker infrastructure. The previous blocking issue with user registration has been **RESOLVED** and the authentication flow is now working end-to-end.
 
 ## ✅ COMPLETED COMPONENTS
 
 ### Authentication Service (Go + Gin)
 - **Location**: `/services/auth-service/`
-- **Status**: ✅ FUNCTIONAL - Basic auth working, needs frontend integration
+- **Status**: ✅ **FULLY FUNCTIONAL** - Complete auth flow working end-to-end
 - **Build Status**: ✅ Successfully builds and runs in Docker
 - **Features Implemented**:
   - JWT token generation and validation (Argon2id password hashing)
-  - User registration and login endpoints
-  - Multi-tenant user management
+  - User registration and login endpoints **✅ WORKING**
+  - Multi-tenant user management with subscription tiers
+  - Enhanced database schema with trial management and billing
   - Comprehensive API routes (auth, users, SSO, billing, UI config)
   - Health checks and readiness probes
-- **Database Integration**: ✅ Connected to PostgreSQL
-- **Testing**: ✅ Health endpoint responds, registration partially working
+- **Database Integration**: ✅ Connected to PostgreSQL with enhanced auth schema
+- **Testing**: ✅ **Registration and login endpoints fully tested and working**
 
 ### Database Schema (PostgreSQL)
-- **Status**: ✅ FULLY IMPLEMENTED  
-- **Tables**: 23 tables created including:
-  - `users`, `tenants` (multi-tenant core)
+- **Status**: ✅ **ENHANCED AND FULLY FUNCTIONAL**
+- **Schema**: Enhanced authentication schema with subscription management
+- **Tables**: 17+ authentication tables + 23 platform tables including:
+  - `users`, `tenants`, `subscription_tiers` (enhanced multi-tenant core)
+  - `user_auth_methods`, `sso_providers` (advanced authentication)
+  - `tenant_usage`, `feature_usage_events` (billing and usage tracking)
   - `crypto_implementations`, `network_assets` (inventory core)
   - `compliance_assessments`, `compliance_frameworks`
   - `reports`, `sensors`, `certificates`
-- **Features**: Multi-tenant isolation, audit trails, soft deletes
-- **Schema Location**: `/scripts/database/`
+- **Features**: Multi-tenant isolation, subscription billing, trial management, audit trails, soft deletes
+- **Schema Location**: `/scripts/database/` (001_auth_schema.sql + migrations.sql + seed.sql)
 
 ### Infrastructure
 - **Docker Compose**: ✅ All services defined with networking
@@ -37,23 +41,30 @@ The main crypto inventory platform is **60% complete** with a functional authent
 - **Health Checks**: ✅ Implemented for all services
 - **Environment**: ✅ Development configuration complete
 
-## 🔄 CURRENT BLOCKING ISSUE
+## ✅ **RESOLVED ISSUES**
 
-### Authentication Registration Failure
-- **Error**: `"failed to create tenant: pq: record \"new\" has no field \"trial_ends_at\""`
-- **Location**: Tenant creation in `/services/auth-service/internal/auth/service.go:295-302`
-- **Root Cause**: Database trigger or function expecting field not in our Go model
-- **Tested Endpoint**: `POST /api/v1/auth/register`
+### ~~Authentication Registration Failure~~ **FIXED**
+- **Previous Error**: `"failed to create tenant: pq: record \"new\" has no field \"trial_ends_at\""`
+- **Resolution**: Updated database schema to use enhanced authentication schema with subscription tiers
+- **Fix Applied**: 
+  - Updated Tenant Go model to include `SubscriptionTierID`, `TrialEndsAt`, `BillingEmail`, `PaymentStatus`
+  - Modified Docker Compose to use enhanced auth schema first
+  - Fixed SQL queries to use correct column names (`is_active` vs `active`)
+  - Updated tenant creation to reference subscription tiers properly
+- **Testing**: ✅ **Registration and login endpoints now fully functional**
 
-### Debugging Information
+### Working Endpoints
 ```bash
-# Database Schema Confirmed (from logs):
-# tenants table has: id, name, slug, subscription_tier, max_endpoints, max_users, settings, created_at, updated_at, deleted_at
-# Trigger exists: set_tenant_trial_end BEFORE INSERT ON tenants
+# Registration endpoint - WORKING
+curl -X POST http://localhost:8081/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "password": "SecurePassword123!", 
+       "first_name": "Test", "last_name": "User", "tenant_name": "Test Company"}'
 
-# Our Go code inserts:
-INSERT INTO tenants (id, name, slug, subscription_tier, max_endpoints, max_users, settings, created_at, updated_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+# Login endpoint - WORKING  
+curl -X POST http://localhost:8081/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "password": "SecurePassword123!"}'
 ```
 
 ## ⏳ PENDING COMPONENTS
@@ -82,41 +93,31 @@ All following services need implementation:
 
 ## 📋 IMMEDIATE NEXT STEPS
 
-### Step 1: Fix Authentication (15 minutes)
+### ~~Step 1: Fix Authentication~~ ✅ **COMPLETED**
+**Status**: ✅ **RESOLVED** - Authentication service is now fully functional
+
+**What was fixed**:
+- Database schema alignment (enhanced auth schema vs basic schema)
+- Tenant model updated with subscription tiers and trial management
+- SQL queries corrected for proper column names
+- Docker Compose configuration updated to use correct schema files
+- Comprehensive testing validated end-to-end auth flow
+
+**Current working endpoints**:
 ```bash
-# 1. Start clean environment
-cd /home/bwoodward/CodeProjects/X
-docker-compose down
-docker-compose up -d postgres redis
-
-# 2. Investigate tenant triggers
-docker-compose exec postgres psql -U crypto_user -d crypto_inventory -c "
-SELECT routine_name, routine_definition 
-FROM information_schema.routines 
-WHERE routine_name = 'set_trial_end_date';"
-
-# 3. Fix tenant creation code or add missing field to model
-# Check trigger function and either:
-# - Add trial_ends_at to tenant model/query
-# - Modify trigger to not require the field
-
-# 4. Rebuild and test
-docker-compose build auth-service
-docker-compose up -d auth-service
-
-# 5. Test registration
+# Test registration (WORKING)
 curl -X POST http://localhost:8081/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@example.com",
-    "password": "SecurePassword123!",
-    "first_name": "Admin",
-    "last_name": "User", 
-    "tenant_name": "Example Company"
-  }'
+  -d '{"email": "admin@example.com", "password": "SecurePassword123!", 
+       "first_name": "Admin", "last_name": "User", "tenant_name": "Example Company"}'
+
+# Test login (WORKING)
+curl -X POST http://localhost:8081/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@example.com", "password": "SecurePassword123!"}'
 ```
 
-### Step 2: Create Frontend (2-3 hours)
+### Step 1: Create Frontend (2-3 hours) - **HIGHEST PRIORITY**
 ```bash
 # 1. Initialize React app
 cd web-ui

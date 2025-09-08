@@ -15,8 +15,9 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/database/init.sql:/docker-entrypoint-initdb.d/01-init.sql
-      - ./scripts/database/migrations.sql:/docker-entrypoint-initdb.d/02-migrations.sql
-      - ./scripts/database/seed.sql:/docker-entrypoint-initdb.d/03-seed.sql
+      - ./scripts/database/001_auth_schema.sql:/docker-entrypoint-initdb.d/02-auth-schema.sql
+      - ./scripts/database/migrations.sql:/docker-entrypoint-initdb.d/03-migrations.sql
+      - ./scripts/database/seed.sql:/docker-entrypoint-initdb.d/04-seed.sql
     ports:
       - "5432:5432"
     healthcheck:

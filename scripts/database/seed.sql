@@ -77,32 +77,15 @@ INSERT INTO compliance_frameworks (id, name, version, description, organization,
 -- Demo Tenant and Users
 -- =================================================================
 
--- Create demo tenant
-INSERT INTO tenants (id, name, slug, subscription_tier, max_endpoints, max_users) VALUES (
-    '550e8400-e29b-41d4-a716-446655440000',
-    'Demo Corporation',
-    'demo-corp',
-    'enterprise',
-    1000,
-    50
-) ON CONFLICT (slug) DO NOTHING;
+-- Demo tenant and initial admin user are created by the auth schema
+-- Using the existing demo tenant for our seed data
+-- Tenant ID: Use the one created by auth schema (demo-corp)
 
--- Create demo users
-INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, role, email_verified, active) VALUES 
-(
-    '550e8400-e29b-41d4-a716-446655440001',
-    '550e8400-e29b-41d4-a716-446655440000',
-    'admin@democorp.com',
-    'Admin',
-    'User',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMye/D7zrZI/PCMZ6qO8PQ8DbZOF5.XzEQm', -- password: admin123
-    'admin',
-    true,
-    true
-),
+-- Create additional demo users for the demo tenant
+INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, role, email_verified, is_active) VALUES 
 (
     '550e8400-e29b-41d4-a716-446655440002',
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     'analyst@democorp.com',
     'Security',
     'Analyst',
@@ -113,7 +96,7 @@ INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, r
 ),
 (
     '550e8400-e29b-41d4-a716-446655440003',
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     'viewer@democorp.com',
     'Read Only',
     'User',
@@ -130,7 +113,7 @@ INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, r
 -- Web servers
 INSERT INTO network_assets (tenant_id, hostname, ip_address, port, asset_type, operating_system, environment, business_unit, owner_email, description, tags) VALUES 
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     'web-prod-01.democorp.com',
     '10.1.1.10',
     443,
@@ -143,7 +126,7 @@ INSERT INTO network_assets (tenant_id, hostname, ip_address, port, asset_type, o
     '{"service": "web", "critical": true, "public_facing": true}'
 ),
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     'web-prod-02.democorp.com',
     '10.1.1.11',
     443,
@@ -156,7 +139,7 @@ INSERT INTO network_assets (tenant_id, hostname, ip_address, port, asset_type, o
     '{"service": "web", "critical": true, "public_facing": true}'
 ),
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     'api-gateway.democorp.com',
     '10.1.2.10',
     443,
@@ -169,7 +152,7 @@ INSERT INTO network_assets (tenant_id, hostname, ip_address, port, asset_type, o
     '{"service": "api", "critical": true, "public_facing": true}'
 ),
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     'db-primary.democorp.internal',
     '10.1.3.10',
     5432,
@@ -182,7 +165,7 @@ INSERT INTO network_assets (tenant_id, hostname, ip_address, port, asset_type, o
     '{"service": "database", "critical": true, "encrypted": true}'
 ),
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     'legacy-ftp.democorp.internal',
     '10.1.4.10',
     21,
@@ -202,7 +185,7 @@ INSERT INTO network_assets (tenant_id, hostname, ip_address, port, asset_type, o
 -- Valid certificate
 INSERT INTO certificates (tenant_id, serial_number, subject_dn, issuer_dn, common_name, subject_alternative_names, signature_algorithm, public_key_algorithm, public_key_size, not_before, not_after, fingerprint_sha1, fingerprint_sha256, is_self_signed, is_ca_certificate) VALUES 
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     '03:e8:6a:c3:cf:75:8d:c4:8b:5e:2d:17:2a:9b:1c:82:4a:5f',
     'CN=*.democorp.com,O=Demo Corporation,L=San Francisco,ST=California,C=US',
     'CN=Let''s Encrypt Authority X3,O=Let''s Encrypt,C=US',
@@ -213,8 +196,8 @@ INSERT INTO certificates (tenant_id, serial_number, subject_dn, issuer_dn, commo
     2048,
     NOW() - INTERVAL '30 days',
     NOW() + INTERVAL '60 days',
-    '2f:5d:9b:8c:7a:3e:4f:1d:6c:8a:9b:7e:5f:2d:4c:8b:1a:9e:7f:3c',
-    'a1:b2:c3:d4:e5:f6:7a:8b:9c:0d:1e:2f:3a:4b:5c:6d:7e:8f:9a:0b:1c:2d:3e:4f:5a:6b:7c:8d:9e:0f:1a:2b',
+    '2f5d9b8c7a3e4f1d6c8a9b7e5f2d4c8b1a9e7f3c',
+    'a1b2c3d4e5f67a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b',
     false,
     false
 );
@@ -222,7 +205,7 @@ INSERT INTO certificates (tenant_id, serial_number, subject_dn, issuer_dn, commo
 -- Expiring certificate
 INSERT INTO certificates (tenant_id, serial_number, subject_dn, issuer_dn, common_name, signature_algorithm, public_key_algorithm, public_key_size, not_before, not_after, fingerprint_sha1, fingerprint_sha256, is_self_signed, is_ca_certificate) VALUES 
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     '04:a1:7b:2c:3d:4e:5f:6a:7b:8c:9d:0e:1f:2a:3b:4c:5d:6e',
     'CN=db-primary.democorp.internal,O=Demo Corporation,C=US',
     'CN=Demo Corporation Internal CA,O=Demo Corporation,C=US',
@@ -232,8 +215,8 @@ INSERT INTO certificates (tenant_id, serial_number, subject_dn, issuer_dn, commo
     2048,
     NOW() - INTERVAL '360 days',
     NOW() + INTERVAL '5 days', -- Expiring soon!
-    '3a:6b:7c:8d:9e:0f:1a:2b:3c:4d:5e:6f:7a:8b:9c:0d:1e:2f:3a:4b',
-    'b2:c3:d4:e5:f6:7a:8b:9c:0d:1e:2f:3a:4b:5c:6d:7e:8f:9a:0b:1c:2d:3e:4f:5a:6b:7c:8d:9e:0f:1a:2b:3c',
+    '3a6b7c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b',
+    'b2c3d4e5f67a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c',
     false,
     false
 );
@@ -241,7 +224,7 @@ INSERT INTO certificates (tenant_id, serial_number, subject_dn, issuer_dn, commo
 -- Self-signed certificate (security issue)
 INSERT INTO certificates (tenant_id, serial_number, subject_dn, issuer_dn, common_name, signature_algorithm, public_key_algorithm, public_key_size, not_before, not_after, fingerprint_sha1, fingerprint_sha256, is_self_signed, is_ca_certificate) VALUES 
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     '01:02:03:04:05:06:07:08:09:0a:0b:0c:0d:0e:0f:10:11:12',
     'CN=legacy-ftp.democorp.internal,O=Demo Corporation,C=US',
     'CN=legacy-ftp.democorp.internal,O=Demo Corporation,C=US', -- Same as subject (self-signed)
@@ -251,8 +234,8 @@ INSERT INTO certificates (tenant_id, serial_number, subject_dn, issuer_dn, commo
     1024, -- Weak key size
     NOW() - INTERVAL '1000 days',
     NOW() + INTERVAL '100 days',
-    '4b:5c:6d:7e:8f:9a:0b:1c:2d:3e:4f:5a:6b:7c:8d:9e:0f:1a:2b:3c',
-    'c3:d4:e5:f6:7a:8b:9c:0d:1e:2f:3a:4b:5c:6d:7e:8f:9a:0b:1c:2d:3e:4f:5a:6b:7c:8d:9e:0f:1a:2b:3c:4d',
+    '4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c',
+    'c3d4e5f67a8b9c0d1e2f3a4b5c6d7e8f9a0b1c2d3e4f5a6b7c8d9e0f1a2b3c4d',
     true,
     false
 );
@@ -264,7 +247,7 @@ INSERT INTO certificates (tenant_id, serial_number, subject_dn, issuer_dn, commo
 -- Good TLS implementation
 INSERT INTO crypto_implementations (tenant_id, asset_id, protocol, protocol_version, cipher_suite, key_exchange_algorithm, signature_algorithm, symmetric_encryption, hash_algorithm, key_size, certificate_id, discovery_method, confidence_score, risk_score) VALUES 
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     (SELECT id FROM network_assets WHERE hostname = 'web-prod-01.democorp.com'),
     'TLS',
     '1.3',
@@ -283,7 +266,7 @@ INSERT INTO crypto_implementations (tenant_id, asset_id, protocol, protocol_vers
 -- Weak TLS implementation
 INSERT INTO crypto_implementations (tenant_id, asset_id, protocol, protocol_version, cipher_suite, key_exchange_algorithm, signature_algorithm, symmetric_encryption, hash_algorithm, key_size, certificate_id, discovery_method, confidence_score, risk_score) VALUES 
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     (SELECT id FROM network_assets WHERE hostname = 'legacy-ftp.democorp.internal'),
     'TLS',
     '1.0', -- Weak version
@@ -302,7 +285,7 @@ INSERT INTO crypto_implementations (tenant_id, asset_id, protocol, protocol_vers
 -- Database encryption
 INSERT INTO crypto_implementations (tenant_id, asset_id, protocol, protocol_version, cipher_suite, key_exchange_algorithm, signature_algorithm, symmetric_encryption, hash_algorithm, key_size, certificate_id, discovery_method, confidence_score, risk_score) VALUES 
 (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     (SELECT id FROM network_assets WHERE hostname = 'db-primary.democorp.internal'),
     'TLS',
     '1.2',
@@ -325,7 +308,7 @@ INSERT INTO crypto_implementations (tenant_id, asset_id, protocol, protocol_vers
 INSERT INTO sensors (id, tenant_id, name, sensor_type, deployment_location, ip_address, hostname, version, status, last_heartbeat_at, api_key_hash) VALUES 
 (
     '550e8400-e29b-41d4-a716-446655440100',
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     'datacenter-sensor-01',
     'network',
     'Primary Datacenter - Rack A1',
@@ -338,7 +321,7 @@ INSERT INTO sensors (id, tenant_id, name, sensor_type, deployment_location, ip_a
 ),
 (
     '550e8400-e29b-41d4-a716-446655440101',
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     'office-sensor-hq',
     'network',
     'Corporate HQ - Floor 5',
@@ -351,7 +334,7 @@ INSERT INTO sensors (id, tenant_id, name, sensor_type, deployment_location, ip_a
 ),
 (
     '550e8400-e29b-41d4-a716-446655440102',
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     'cloud-monitor-aws',
     'cloud',
     'AWS US-West-2',
@@ -428,7 +411,7 @@ INSERT INTO compliance_assessments (
     assessment_results,
     assessed_by
 ) VALUES (
-    '550e8400-e29b-41d4-a716-446655440000',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
     (SELECT id FROM compliance_frameworks WHERE name = 'PCI DSS' LIMIT 1),
     'Q4 2023 PCI DSS Assessment',
     '{"environments": ["production"], "asset_types": ["server", "service"]}',
@@ -449,7 +432,7 @@ INSERT INTO compliance_assessments (
             "Implement automated certificate renewal"
         ]
     }',
-    '550e8400-e29b-41d4-a716-446655440001'
+    (SELECT id FROM users WHERE email = 'admin@democorp.com' LIMIT 1)
 );
 
 -- =================================================================
@@ -458,18 +441,18 @@ INSERT INTO compliance_assessments (
 
 INSERT INTO audit.audit_logs (tenant_id, user_id, action, resource_type, resource_id, ip_address, user_agent, success) VALUES 
 (
-    '550e8400-e29b-41d4-a716-446655440000',
-    '550e8400-e29b-41d4-a716-446655440001',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
+    (SELECT id FROM users WHERE email = 'admin@democorp.com' LIMIT 1),
     'login',
     'user',
-    '550e8400-e29b-41d4-a716-446655440001',
+    (SELECT id FROM users WHERE email = 'admin@democorp.com' LIMIT 1),
     '192.168.1.100',
     'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
     true
 ),
 (
-    '550e8400-e29b-41d4-a716-446655440000',
-    '550e8400-e29b-41d4-a716-446655440001',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
+    (SELECT id FROM users WHERE email = 'admin@democorp.com' LIMIT 1),
     'view_compliance_assessment',
     'compliance_assessment',
     (SELECT id FROM compliance_assessments LIMIT 1),
@@ -478,8 +461,8 @@ INSERT INTO audit.audit_logs (tenant_id, user_id, action, resource_type, resourc
     true
 ),
 (
-    '550e8400-e29b-41d4-a716-446655440000',
-    '550e8400-e29b-41d4-a716-446655440002',
+    (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
+    (SELECT id FROM users WHERE email = 'analyst@democorp.com' LIMIT 1),
     'generate_report',
     'report',
     NULL,

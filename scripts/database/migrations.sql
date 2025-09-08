@@ -7,49 +7,8 @@
 -- Tenant Management
 -- =================================================================
 
--- Tenants table
-CREATE TABLE IF NOT EXISTS tenants (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR(255) NOT NULL,
-    slug VARCHAR(100) UNIQUE NOT NULL,
-    subscription_tier subscription_tier NOT NULL DEFAULT 'basic',
-    max_endpoints INTEGER DEFAULT 100,
-    max_users INTEGER DEFAULT 10,
-    settings JSONB DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    
-    CONSTRAINT valid_slug CHECK (slug ~ '^[a-z0-9-]+$'),
-    CONSTRAINT valid_max_endpoints CHECK (max_endpoints > 0),
-    CONSTRAINT valid_max_users CHECK (max_users > 0)
-);
-
--- Users table
-CREATE TABLE IF NOT EXISTS users (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    tenant_id UUID NOT NULL REFERENCES tenants(id) ON DELETE CASCADE,
-    email VARCHAR(255) NOT NULL,
-    first_name VARCHAR(100),
-    last_name VARCHAR(100),
-    password_hash VARCHAR(255), -- NULL for SSO users
-    role user_role NOT NULL DEFAULT 'viewer',
-    sso_provider VARCHAR(50),
-    sso_external_id VARCHAR(255),
-    email_verified BOOLEAN DEFAULT FALSE,
-    active BOOLEAN DEFAULT TRUE,
-    last_login_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    deleted_at TIMESTAMP WITH TIME ZONE,
-    
-    CONSTRAINT valid_email CHECK (email ~ '^[^@]+@[^@]+\.[^@]+$'),
-    CONSTRAINT unique_email_per_tenant UNIQUE (tenant_id, email),
-    CONSTRAINT sso_consistency CHECK (
-        (sso_provider IS NULL AND sso_external_id IS NULL AND password_hash IS NOT NULL) OR
-        (sso_provider IS NOT NULL AND sso_external_id IS NOT NULL)
-    )
-);
+-- Tenants and users tables are created by the authentication schema
+-- Skipping to avoid conflicts...
 
 -- =================================================================
 -- Network Discovery
@@ -327,8 +286,7 @@ CREATE INDEX IF NOT EXISTS idx_compliance_assessments_tenant_id ON compliance_as
 CREATE INDEX IF NOT EXISTS idx_reports_tenant_id ON reports(tenant_id);
 
 -- Search and lookup indexes
-CREATE INDEX IF NOT EXISTS idx_users_email ON users(email) WHERE deleted_at IS NULL;
-CREATE INDEX IF NOT EXISTS idx_users_sso ON users(sso_provider, sso_external_id) WHERE deleted_at IS NULL;
+-- User indexes are created by the authentication schema
 CREATE INDEX IF NOT EXISTS idx_network_assets_ip_port ON network_assets(ip_address, port) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_network_assets_hostname ON network_assets(hostname) WHERE deleted_at IS NULL;
 CREATE INDEX IF NOT EXISTS idx_certificates_fingerprint_sha256 ON certificates(fingerprint_sha256);
@@ -364,12 +322,7 @@ CREATE INDEX IF NOT EXISTS idx_ai_analysis_results_tenant_type ON ai_analysis_re
 -- Triggers for Automatic Updates
 -- =================================================================
 
--- Update timestamps
-CREATE TRIGGER update_tenants_updated_at BEFORE UPDATE ON tenants
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-
-CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
-    FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+-- Update timestamps for core platform tables (tenants/users triggers are in auth schema)
 
 CREATE TRIGGER update_network_assets_updated_at BEFORE UPDATE ON network_assets
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
