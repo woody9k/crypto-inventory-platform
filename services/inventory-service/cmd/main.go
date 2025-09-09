@@ -1,66 +1,75 @@
 package main
 
 import (
-	"context"
+	"inventory-service/internal/config"
+	"inventory-service/internal/database"
+	"inventory-service/internal/handlers"
+	"inventory-service/internal/services"
 	"log"
 	"net/http"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
 func main() {
-	// Set Gin mode
-	if os.Getenv("ENV") == "production" {
-		gin.SetMode(gin.ReleaseMode)
+	// Load configuration
+	cfg := config.Load()
+
+	// Connect to database
+	db, err := database.NewConnection(cfg)
+	if err != nil {
+		log.Fatalf("Failed to connect to database: %v", err)
 	}
+	defer db.Close()
 
-	// Initialize router
-	router := gin.Default()
-	
-	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"service": "inventory-service",
-		})
-	})
+	// Initialize services
+	assetService := services.NewAssetService(db)
 
-	// Setup server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
+	// Initialize handlers
+	assetHandler := handlers.NewAssetHandler(assetService)
 
-	srv := &http.Server{
-		Addr:    ":" + port,
-		Handler: router,
+	// Setup Gin router
+	r := gin.Default()
+
+	// CORS middleware
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:3001", "http://localhost:3002"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
+	// Health check endpoint (no auth required)
+	r.GET("/health", assetHandler.Health)
+
+	// API routes with JWT middleware
+	api := r.Group("/api/v1")
+	api.Use(handlers.JWTMiddleware(cfg))
+	{
+		// Asset endpoints
+		api.GET("/assets", assetHandler.GetAssets)
+		api.GET("/assets/search", assetHandler.SearchAssets)
+		api.GET("/assets/:id", assetHandler.GetAssetByID)
+		api.GET("/assets/:id/crypto", assetHandler.GetAssetCrypto)
+
+		// Risk endpoints
+		api.GET("/risk/summary", assetHandler.GetRiskSummary)
 	}
 
 	// Start server
-	go func() {
-		log.Printf("inventory-service starting on port %s", port)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("Failed to start server: %v", err)
-		}
-	}()
-
-	// Wait for interrupt signal
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-	<-quit
-
-	log.Println("Shutting down inventory-service...")
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Printf("inventory-service forced to shutdown: %v", err)
+	server := &http.Server{
+		Addr:    cfg.Server.Host + ":" + cfg.Server.Port,
+		Handler: r,
 	}
 
-	log.Println("inventory-service stopped")
+	log.Printf("🚀 Inventory Service starting on %s:%s", cfg.Server.Host, cfg.Server.Port)
+	log.Printf("📊 Ready to serve crypto asset inventory")
+
+	if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		log.Fatalf("Failed to start server: %v", err)
+	}
 }

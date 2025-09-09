@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Button } from '../common/Button';
@@ -14,13 +14,14 @@ import {
 export const Header: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
 
   return (
     <header className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          {/* Logo and brand */}
-          <div className="flex items-center">
+          {/* Logo and Navigation */}
+          <div className="flex items-center space-x-8">
             <Link to="/" className="flex items-center space-x-2">
               <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
                 <span className="text-white font-bold text-sm">CI</span>
@@ -29,6 +30,32 @@ export const Header: React.FC = () => {
                 CryptoInventory
               </span>
             </Link>
+            
+            {/* Navigation Links */}
+            {isAuthenticated && (
+              <nav className="hidden md:flex space-x-6">
+                <Link
+                  to="/dashboard"
+                  className={`text-sm font-medium transition-colors ${
+                    location.pathname === '/dashboard'
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
+                  }`}
+                >
+                  Dashboard
+                </Link>
+                <Link
+                  to="/assets"
+                  className={`text-sm font-medium transition-colors ${
+                    location.pathname === '/assets'
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
+                  }`}
+                >
+                  Assets
+                </Link>
+              </nav>
+            )}
           </div>
 
           {/* Right side actions */}

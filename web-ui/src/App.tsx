@@ -8,6 +8,7 @@ import { Header } from './components/layout/Header';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
+import { AssetsPage } from './pages/AssetsPage';
 
 // Create a query client instance
 const queryClient = new QueryClient({
@@ -68,6 +69,16 @@ const AppRouter: React.FC = () => {
             <ProtectedRoute>
               <Layout>
                 <DashboardPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/assets"
+          element={
+            <ProtectedRoute>
+              <Layout>
+                <AssetsPage />
               </Layout>
             </ProtectedRoute>
           }
