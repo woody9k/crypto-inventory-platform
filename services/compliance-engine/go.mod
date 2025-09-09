@@ -1,6 +1,6 @@
 module github.com/democorp/crypto-inventory/services/compliance-engine
 
-go 1.24.6
+go 1.21
 
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect
