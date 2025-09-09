@@ -18,6 +18,8 @@ services:
       - ./scripts/database/001_auth_schema.sql:/docker-entrypoint-initdb.d/02-auth-schema.sql
       - ./scripts/database/migrations.sql:/docker-entrypoint-initdb.d/03-migrations.sql
       - ./scripts/database/seed.sql:/docker-entrypoint-initdb.d/04-seed.sql
+      - ./scripts/database/05-rbac-migration.sql:/docker-entrypoint-initdb.d/05-rbac-migration.sql
+      - ./scripts/database/06-rbac-seed.sql:/docker-entrypoint-initdb.d/06-rbac-seed.sql
     ports:
       - "5432:5432"
     healthcheck:

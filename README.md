@@ -14,8 +14,9 @@ This platform helps organizations:
 ## 🏗️ Architecture
 
 ### Core Services
-- **Auth Service**: Multi-tenant authentication and authorization
+- **Auth Service**: Multi-tenant authentication and authorization with comprehensive RBAC
 - **Inventory Service**: Asset discovery and crypto implementation tracking
+- **RBAC System**: Complete role-based access control with platform and tenant-level administration
 - **Compliance Engine**: Framework-specific compliance analysis
 - **Report Generator**: PDF/Excel report generation and scheduling
 - **Sensor Manager**: Network sensor coordination and data ingestion

@@ -8,6 +8,7 @@ import (
 	"github.com/democorp/crypto-inventory/services/auth-service/internal/auth"
 	"github.com/democorp/crypto-inventory/services/auth-service/internal/config"
 	"github.com/democorp/crypto-inventory/services/auth-service/internal/middleware"
+	"github.com/democorp/crypto-inventory/services/auth-service/internal/rbac"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/redis/go-redis/v9"
@@ -25,6 +26,10 @@ func SetupRouter(cfg *config.Config, db *sql.DB, redis *redis.Client) *gin.Engin
 
 	// Initialize handlers
 	authHandlers := NewAuthHandlers(authService, cfg)
+
+	// Initialize RBAC service and handlers
+	rbacService := rbac.NewRBACService(db)
+	rbacHandlers := NewRBACHandlers(rbacService)
 
 	// Middleware
 	router.Use(gin.Logger())
@@ -145,6 +150,69 @@ func SetupRouter(cfg *config.Config, db *sql.DB, redis *redis.Client) *gin.Engin
 		features.Use(middleware.RequireAuth(cfg, jwtService))
 		{
 			features.GET("/availability", getFeatureAvailabilityHandler(db))
+		}
+
+		// =================================================================
+		// RBAC (Role-Based Access Control) Routes
+		// =================================================================
+
+		// Tenant role management routes
+		tenantRoles := v1.Group("/tenant/:tenantId/roles")
+		tenantRoles.Use(middleware.RequireAuth(cfg, jwtService))
+		tenantRoles.Use(middleware.RequirePermission(rbacService, "users.manage"))
+		{
+			tenantRoles.GET("", rbacHandlers.GetTenantRoles)
+			tenantRoles.GET("/:roleId/matrix", rbacHandlers.GetPermissionMatrix)
+			tenantRoles.PUT("/:roleId/permissions", rbacHandlers.UpdateRolePermissions)
+		}
+
+		// Tenant permissions routes
+		tenantPermissions := v1.Group("/permissions")
+		tenantPermissions.Use(middleware.RequireAuth(cfg, jwtService))
+		{
+			tenantPermissions.GET("", rbacHandlers.GetTenantPermissions)
+		}
+
+		// User role assignment routes
+		userRoles := v1.Group("/tenant/:tenantId/users/:userId/roles")
+		userRoles.Use(middleware.RequireAuth(cfg, jwtService))
+		userRoles.Use(middleware.RequirePermission(rbacService, "users.manage"))
+		{
+			userRoles.GET("", rbacHandlers.GetUserRoles)
+			userRoles.POST("", rbacHandlers.AssignRole)
+			userRoles.DELETE("/:roleId", rbacHandlers.RemoveRole)
+		}
+
+		// User permissions routes
+		userPermissions := v1.Group("/tenant/:tenantId/users/:userId/permissions")
+		userPermissions.Use(middleware.RequireAuth(cfg, jwtService))
+		userPermissions.Use(middleware.RequirePermission(rbacService, "users.read"))
+		{
+			userPermissions.GET("", rbacHandlers.GetUserPermissions)
+		}
+
+		// Permission check routes
+		permissionCheck := v1.Group("/permissions/check")
+		permissionCheck.Use(middleware.RequireAuth(cfg, jwtService))
+		{
+			permissionCheck.POST("", rbacHandlers.CheckPermission)
+		}
+
+		// Platform administration routes (platform admin only)
+		platform := v1.Group("/platform")
+		platform.Use(middleware.RequireAuth(cfg, jwtService))
+		platform.Use(middleware.RequirePlatformPermission(rbacService, "platform.settings"))
+		{
+			platform.GET("/users", rbacHandlers.GetPlatformUsers)
+			platform.GET("/roles", rbacHandlers.GetPlatformRoles)
+		}
+
+		// Audit and monitoring routes
+		audit := v1.Group("/audit")
+		audit.Use(middleware.RequireAuth(cfg, jwtService))
+		audit.Use(middleware.RequirePermission(rbacService, "settings.read"))
+		{
+			audit.GET("/logs", rbacHandlers.GetAuditLogs)
 		}
 
 		// Frontend flexibility: Workflow management routes
