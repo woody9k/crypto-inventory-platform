@@ -1,4 +1,6 @@
 # Multi-stage build for React development
+# This Dockerfile creates a production-ready React application
+# with nginx serving the built static files
 FROM node:18-alpine AS builder
 
 # Set working directory

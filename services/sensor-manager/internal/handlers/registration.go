@@ -1,3 +1,6 @@
+// Package handlers provides HTTP handlers for the sensor-manager service.
+// This file contains handlers for sensor registration and pending sensor management,
+// including registration key generation, IP validation, and mTLS certificate creation.
 package handlers
 
 import (

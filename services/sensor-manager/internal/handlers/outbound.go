@@ -1,3 +1,7 @@
+// Package handlers provides HTTP handlers for the sensor-manager service.
+// This file contains handlers for outbound-only communication patterns,
+// allowing sensors to poll for commands and submit data without requiring
+// inbound firewall rules.
 package handlers
 
 import (
@@ -7,7 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Heartbeat handles sensor heartbeat and returns commands (outbound-only)
+// Heartbeat handles sensor heartbeat and returns commands (outbound-only).
+// This endpoint allows sensors to report their status and receive commands
+// without requiring inbound firewall rules. The sensor initiates the connection.
 func (h *Handler) Heartbeat(c *gin.Context) {
 	sensorID := c.Param("sensor_id")
 
@@ -36,7 +42,9 @@ func (h *Handler) Heartbeat(c *gin.Context) {
 	c.JSON(http.StatusOK, commands)
 }
 
-// PollCommands handles sensor polling for commands (outbound-only)
+// PollCommands handles sensor polling for commands (outbound-only).
+// Sensors can poll this endpoint to check for pending commands without
+// requiring the control plane to initiate connections.
 func (h *Handler) PollCommands(c *gin.Context) {
 	sensorID := c.Param("sensor_id")
 
@@ -53,7 +61,9 @@ func (h *Handler) PollCommands(c *gin.Context) {
 	c.JSON(http.StatusOK, commands)
 }
 
-// AcknowledgeCommand handles command acknowledgments from sensors
+// AcknowledgeCommand handles command acknowledgments from sensors.
+// This allows sensors to confirm they have received and processed commands,
+// enabling proper command lifecycle management.
 func (h *Handler) AcknowledgeCommand(c *gin.Context) {
 	sensorID := c.Param("sensor_id")
 
