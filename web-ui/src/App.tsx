@@ -1,3 +1,23 @@
+/**
+ * Main Application Component
+ * 
+ * This is the root component of the crypto inventory management platform.
+ * It sets up the application routing, state management, and global providers.
+ * 
+ * Architecture:
+ * - React Router v6 for client-side routing with protected routes
+ * - React Query for server state management and caching
+ * - Context providers for authentication and theme management
+ * - Toast notifications for user feedback
+ * - Responsive layout with header navigation
+ * 
+ * Key Features:
+ * - Multi-tenant authentication with JWT tokens
+ * - Protected routing based on authentication status
+ * - Dark/light theme support with persistent preferences
+ * - Real-time data fetching with React Query
+ * - Professional UI with TailwindCSS styling
+ */
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,7 +30,7 @@ import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AssetsPage } from './pages/AssetsPage';
 
-// Create a query client instance
+// Create a query client instance with optimized defaults for crypto inventory data
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {

@@ -1,3 +1,13 @@
+// Package services provides business logic for the crypto inventory management system.
+// It handles asset discovery, crypto implementation tracking, risk assessment,
+// and compliance analysis for cryptographic assets across network infrastructure.
+//
+// Key Features:
+// - Asset CRUD operations with multi-tenant isolation
+// - Advanced search and filtering capabilities
+// - Risk scoring based on crypto implementation strength
+// - Protocol and cipher suite analysis
+// - Compliance framework integration
 package services
 
 import (
@@ -17,9 +27,16 @@ func NewAssetService(db *database.DB) *AssetService {
 	return &AssetService{db: db}
 }
 
-// GetAssets retrieves assets with filtering, pagination, and risk analysis
+// GetAssets retrieves assets with filtering, pagination, and risk analysis.
+// This is the core method for asset discovery and management with the following features:
+// - Multi-tenant data isolation (only returns assets for the specified tenant)
+// - Advanced filtering by asset type, environment, protocol, and risk level
+// - Full-text search across hostname, IP address, and description
+// - Risk scoring based on crypto implementation strength
+// - Pagination support for large datasets
+// - Sorting by risk score, discovery date, or custom fields
 func (s *AssetService) GetAssets(tenantID uuid.UUID, filters models.AssetFilters) ([]models.Asset, int, error) {
-	// Build the base query
+	// Build the base query with tenant isolation and risk scoring
 	baseQuery := `
 		SELECT 
 			a.id, a.tenant_id, a.hostname, a.ip_address, a.port, a.asset_type,

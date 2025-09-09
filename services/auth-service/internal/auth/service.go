@@ -1,3 +1,14 @@
+// Package auth provides comprehensive authentication services for the crypto inventory platform.
+// It handles user registration, login, JWT token management, multi-tenant user isolation,
+// password security, and session management with Redis caching.
+//
+// Key Features:
+// - Multi-tenant user management with subscription tiers
+// - JWT-based authentication with access/refresh token pattern
+// - Argon2id password hashing for security
+// - Redis-based session management and token blacklisting
+// - Email verification and password reset workflows
+// - SSO provider integration support
 package auth
 
 import (
@@ -40,14 +51,19 @@ func NewAuthService(db *sql.DB, redis *redis.Client, jwt *JWTService) *AuthServi
 	}
 }
 
-// Register creates a new user account
+// Register creates a new user account with the following business rules:
+// - Password must meet strength requirements (8+ chars, mixed case, numbers, symbols)
+// - Email must be unique across all tenants
+// - If tenant_name is provided, creates new tenant; otherwise joins existing tenant
+// - Returns user with hashed password and tenant association
+// - Triggers email verification workflow
 func (a *AuthService) Register(req *models.RegisterRequest) (*models.User, error) {
-	// Validate password strength
+	// Validate password strength according to security policy
 	if err := ValidatePasswordStrength(req.Password); err != nil {
 		return nil, err
 	}
 
-	// Check if email already exists
+	// Check if email already exists across all tenants (global uniqueness)
 	existingUser, err := a.GetUserByEmail(req.Email)
 	if err != nil && err != ErrUserNotFound {
 		return nil, err
@@ -99,9 +115,16 @@ func (a *AuthService) Register(req *models.RegisterRequest) (*models.User, error
 	return user, nil
 }
 
-// Login authenticates a user and returns tokens
+// Login authenticates a user and returns JWT tokens with the following process:
+// - Validates email format and password presence
+// - Retrieves user from database with tenant information
+// - Verifies user account is active and email is verified
+// - Validates password using Argon2id hash comparison
+// - Generates access token (15min) and refresh token (7 days)
+// - Stores refresh token in Redis for session management
+// - Updates last login timestamp
 func (a *AuthService) Login(req *models.LoginRequest) (*models.AuthResponse, error) {
-	// Get user by email
+	// Get user by email with tenant information for multi-tenant isolation
 	user, err := a.GetUserByEmail(req.Email)
 	if err != nil {
 		if err == ErrUserNotFound {
