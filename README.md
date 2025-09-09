@@ -32,6 +32,15 @@ This platform helps organizations:
 - **Passive Analysis**: TLS, SSH, IPSec, VPN discovery
 - **Edge AI**: Local anomaly detection capabilities
 
+### Reporting System
+- **Comprehensive Reports**: Crypto summaries, compliance status, network topology, risk assessments
+- **Real-Time Generation**: Asynchronous report processing with status tracking
+- **Multiple Formats**: PDF, Excel, JSON output options
+- **Template System**: Predefined and customizable report templates
+- **Web UI Integration**: Complete report management interface
+- **Demo Data**: Enterprise-scale sample data for demonstrations
+- **API Access**: RESTful API for programmatic report generation
+
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -162,6 +171,7 @@ make test-load
 - [Deployment Guide](./architecture_docs/06_deployment_guide.md)
 - [Sensor Management Guide](./SENSOR_MANAGEMENT_GUIDE.md)
 - [Security Architecture](./SECURITY_ARCHITECTURE.md)
+- [Reporting System Guide](./REPORTING_SYSTEM_GUIDE.md)
 - [Development Setup](./docs/development.md)
 
 ## 🤝 Contributing

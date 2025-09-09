@@ -233,6 +233,39 @@ services:
       - crypto-network
     restart: unless-stopped
 
+  report-generator:
+    build:
+      context: ./services/report-generator
+      dockerfile: Dockerfile.dev
+    container_name: crypto-report-generator
+    environment:
+      - PORT=8083
+      - ENV=development
+      - DATABASE_URL=postgres://crypto_user:crypto_pass_dev@postgres:5432/crypto_inventory?sslmode=disable
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=dev-token-1234567890
+      - INFLUXDB_ORG=crypto-inventory
+      - INFLUXDB_BUCKET=metrics
+      - NATS_URL=nats://nats_user:nats_pass_dev@nats:4222
+      - LOG_LEVEL=debug
+    ports:
+      - "8083:8083"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+    volumes:
+      - ./services/report-generator:/app
+      - /app/vendor
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
   ai-analysis-service:
     build:
       context: ./services/ai-analysis-service

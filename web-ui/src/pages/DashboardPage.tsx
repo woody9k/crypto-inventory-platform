@@ -13,10 +13,10 @@ export const DashboardPage: React.FC = () => {
   const { user, tenant } = useAuth();
 
   const stats = [
-    { name: 'Network Assets', value: '42', icon: ServerIcon, change: '+12%', changeType: 'positive' },
-    { name: 'Crypto Implementations', value: '18', icon: CpuChipIcon, change: '+7%', changeType: 'positive' },
-    { name: 'Compliance Score', value: '87%', icon: ShieldCheckIcon, change: '-2%', changeType: 'negative' },
-    { name: 'Active Sensors', value: '3', icon: ChartBarIcon, change: 'No change', changeType: 'neutral' },
+    { name: 'Network Assets', value: '1,247', icon: ServerIcon, change: '+12%', changeType: 'positive' },
+    { name: 'Crypto Implementations', value: '892', icon: CpuChipIcon, change: '+7%', changeType: 'positive' },
+    { name: 'Compliance Score', value: '78%', icon: ShieldCheckIcon, change: '+5%', changeType: 'positive' },
+    { name: 'Active Sensors', value: '12', icon: ChartBarIcon, change: '+2', changeType: 'positive' },
   ];
 
   const recentActivity = [
@@ -24,6 +24,8 @@ export const DashboardPage: React.FC = () => {
     { action: 'Certificate expiring soon', asset: 'db-primary.democorp.internal', time: '4 hours ago' },
     { action: 'Sensor heartbeat received', asset: 'datacenter-sensor-01', time: '5 minutes ago' },
     { action: 'Compliance check completed', asset: 'PCI DSS Assessment', time: '1 day ago' },
+    { action: 'Report generated', asset: 'Crypto Summary Report', time: '3 hours ago' },
+    { action: 'Risk assessment updated', asset: 'Network Security Scan', time: '6 hours ago' },
   ];
 
   return (
