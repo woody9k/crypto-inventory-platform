@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/democorp/crypto-inventory/services/sensor-manager/internal/models"
 	"github.com/gin-gonic/gin"
@@ -30,13 +29,8 @@ func (h *Handler) Heartbeat(c *gin.Context) {
 
 	// For now, return empty commands
 	commands := models.SensorCommands{
-		SensorID:  sensorID,
-		Timestamp: time.Now(),
-		Commands:  []models.Command{},
-		Metadata: map[string]interface{}{
-			"heartbeat_received": true,
-			"last_seen":          time.Now(),
-		},
+		SensorID: sensorID,
+		Commands: []models.Command{},
 	}
 
 	c.JSON(http.StatusOK, commands)
@@ -52,13 +46,8 @@ func (h *Handler) PollCommands(c *gin.Context) {
 
 	// For now, return empty commands
 	commands := models.SensorCommands{
-		SensorID:  sensorID,
-		Timestamp: time.Now(),
-		Commands:  []models.Command{},
-		Metadata: map[string]interface{}{
-			"poll_received": true,
-			"last_poll":     time.Now(),
-		},
+		SensorID: sensorID,
+		Commands: []models.Command{},
 	}
 
 	c.JSON(http.StatusOK, commands)
@@ -97,8 +86,9 @@ func (h *Handler) GetWebhookConfig(c *gin.Context) {
 	// TODO: Load webhook configuration from database
 	// For now, return disabled webhook config
 	webhookConfig := models.WebhookConfig{
+		SensorID:   sensorID, // Use sensorID to avoid unused variable warning
 		Enabled:    false,
-		URL:        "",
+		WebhookURL: "",
 		Secret:     "",
 		Events:     []string{},
 		RetryCount: 3,

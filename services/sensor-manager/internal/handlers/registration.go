@@ -2,8 +2,13 @@ package handlers
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
+	"math/big"
 	"net"
 	"time"
 
@@ -73,14 +78,14 @@ var (
 // for a sensor that will be installed later. The key is time-limited
 // and bound to a specific IP address for security.
 func (h *Handler) CreatePendingSensor(c *gin.Context) {
-    var req struct {
-        Name              string   `json:"name" binding:"required"`              // Human-readable sensor name
-        IPAddress         string   `json:"ip_address" binding:"required"`        // IP address for validation
-        Tags              []string `json:"tags"`                                 // Optional tags for grouping
-        Profile           string   `json:"profile" binding:"required"`           // Deployment profile
-        NetworkInterfaces []string `json:"network_interfaces"`                   // Interfaces to monitor
-        Description       string   `json:"description"`                          // Optional description
-    }
+	var req struct {
+		Name              string   `json:"name" binding:"required"`       // Human-readable sensor name
+		IPAddress         string   `json:"ip_address" binding:"required"` // IP address for validation
+		Tags              []string `json:"tags"`                          // Optional tags for grouping
+		Profile           string   `json:"profile" binding:"required"`    // Deployment profile
+		NetworkInterfaces []string `json:"network_interfaces"`            // Interfaces to monitor
+		Description       string   `json:"description"`                   // Optional description
+	}
 
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(400, gin.H{"error": err.Error()})
@@ -136,12 +141,12 @@ func (h *Handler) CreatePendingSensor(c *gin.Context) {
 // with the control plane. It validates the registration key, checks IP
 // address binding, and returns mTLS certificates for secure communication.
 func (h *Handler) RegisterSensor(c *gin.Context) {
-    var req RegistrationRequest
+	var req RegistrationRequest
 
-    if err := c.ShouldBindJSON(&req); err != nil {
-        c.JSON(400, gin.H{"error": err.Error()})
-        return
-    }
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
+		return
+	}
 
 	// Validate IP address format
 	if net.ParseIP(req.IPAddress) == nil {
@@ -189,13 +194,13 @@ func (h *Handler) RegisterSensor(c *gin.Context) {
 	pendingSensor.Status = "used"
 
 	// Generate mTLS certificates
-	caCertPEM, caKeyPEM, err := generateCACertificate()
+	caCertPEM, caKeyPEM, err := h.generateCACertificate()
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to generate CA certificate"})
 		return
 	}
 
-	sensorCertPEM, sensorKeyPEM, err := generateSensorCertificate(req.Name, caCertPEM, caKeyPEM)
+	sensorCertPEM, sensorKeyPEM, err := h.generateSensorCertificate(req.Name, caCertPEM, caKeyPEM)
 	if err != nil {
 		c.JSON(500, gin.H{"error": "Failed to generate sensor certificate"})
 		return
@@ -323,4 +328,115 @@ func getProfileReportingInterval(profile string) int {
 	default:
 		return 60
 	}
+}
+
+// generateCACertificate generates a CA certificate for mTLS
+func (h *Handler) generateCACertificate() (string, string, error) {
+	// Generate private key
+	caKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Create CA certificate template
+	caTemplate := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization:  []string{"Crypto Inventory CA"},
+			Country:       []string{"US"},
+			Province:      []string{""},
+			Locality:      []string{"San Francisco"},
+			StreetAddress: []string{""},
+			PostalCode:    []string{""},
+		},
+		NotBefore:             time.Now(),
+		NotAfter:              time.Now().AddDate(10, 0, 0), // 10 years
+		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	// Create CA certificate
+	caCertDER, err := x509.CreateCertificate(rand.Reader, &caTemplate, &caTemplate, &caKey.PublicKey, caKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Encode CA certificate
+	caCertPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: caCertDER,
+	})
+
+	// Encode CA private key
+	caKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(caKey),
+	})
+
+	return string(caCertPEM), string(caKeyPEM), nil
+}
+
+// generateSensorCertificate generates a client certificate for a sensor
+func (h *Handler) generateSensorCertificate(sensorName, caCertPEM, caKeyPEM string) (string, string, error) {
+	// Parse CA certificate
+	caBlock, _ := pem.Decode([]byte(caCertPEM))
+	caCert, err := x509.ParseCertificate(caBlock.Bytes)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Parse CA private key
+	caKeyBlock, _ := pem.Decode([]byte(caKeyPEM))
+	caKey, err := x509.ParsePKCS1PrivateKey(caKeyBlock.Bytes)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Generate sensor private key
+	sensorKey, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Create sensor certificate template
+	sensorTemplate := x509.Certificate{
+		SerialNumber: big.NewInt(2),
+		Subject: pkix.Name{
+			Organization:  []string{"Crypto Inventory Sensor"},
+			Country:       []string{"US"},
+			Province:      []string{""},
+			Locality:      []string{"San Francisco"},
+			StreetAddress: []string{""},
+			PostalCode:    []string{""},
+			CommonName:    sensorName,
+		},
+		NotBefore:   time.Now(),
+		NotAfter:    time.Now().AddDate(1, 0, 0), // 1 year
+		KeyUsage:    x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+		IPAddresses: []net.IP{},
+		DNSNames:    []string{sensorName},
+	}
+
+	// Create sensor certificate
+	sensorCertDER, err := x509.CreateCertificate(rand.Reader, &sensorTemplate, caCert, &sensorKey.PublicKey, caKey)
+	if err != nil {
+		return "", "", err
+	}
+
+	// Encode sensor certificate
+	sensorCertPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: sensorCertDER,
+	})
+
+	// Encode sensor private key
+	sensorKeyPEM := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(sensorKey),
+	})
+
+	return string(sensorCertPEM), string(sensorKeyPEM), nil
 }
