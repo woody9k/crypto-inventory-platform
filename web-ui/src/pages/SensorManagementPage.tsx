@@ -8,6 +8,8 @@ import {
   EyeIcon,
   ExclamationTriangleIcon,
   CheckCircleIcon,
+  ClockIcon,
+  ClipboardDocumentIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
 
@@ -37,7 +39,12 @@ const SensorManagementPage: React.FC<SensorManagementPageProps> = () => {
   const [sensors, setSensors] = useState<Sensor[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddSensor, setShowAddSensor] = useState(false);
-  const [selectedSensor, setSelectedSensor] = useState<Sensor | null>(null);
+  const [, setSelectedSensor] = useState<Sensor | null>(null);
+
+  // Delete sensor function
+  const deleteSensor = (id: string) => {
+    setSensors(sensors.filter(s => s.id !== id));
+  };
 
   // Mock data for demonstration
   useEffect(() => {
@@ -353,7 +360,10 @@ const SensorManagementPage: React.FC<SensorManagementPageProps> = () => {
                         Start
                       </button>
                     )}
-                    <button className="inline-flex items-center px-3 py-1 border border-red-300 dark:border-red-600 text-sm font-medium rounded-md text-red-700 dark:text-red-300 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-600">
+                    <button 
+                      onClick={() => deleteSensor(sensor.id)}
+                      className="inline-flex items-center px-3 py-1 border border-red-300 dark:border-red-600 text-sm font-medium rounded-md text-red-700 dark:text-red-300 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-600"
+                    >
                       <TrashIcon className="h-4 w-4 mr-1" />
                       Remove
                     </button>
@@ -415,7 +425,7 @@ const SensorManagementPage: React.FC<SensorManagementPageProps> = () => {
                             onClick={() => navigator.clipboard.writeText(sensor.registrationKey!)}
                             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
                           >
-                            <CopyIcon className="h-4 w-4" />
+                            <ClipboardDocumentIcon className="h-4 w-4" />
                           </button>
                         </div>
                       </div>
@@ -425,13 +435,13 @@ const SensorManagementPage: React.FC<SensorManagementPageProps> = () => {
                         </p>
                         <div className="flex items-center space-x-2">
                           <code className="text-sm text-blue-900 dark:text-blue-100 bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded flex-1">
-                            sudo ./install-sensor.sh --key {sensor.registrationKey} --ip {sensor.ipAddress} --name {sensor.name} --profile {sensor.profile}
+                            curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key {sensor.registrationKey} --ip {sensor.ipAddress} --name "{sensor.name}" --profile {sensor.profile}
                           </code>
                           <button
-                            onClick={() => navigator.clipboard.writeText(`sudo ./install-sensor.sh --key ${sensor.registrationKey} --ip ${sensor.ipAddress} --name ${sensor.name} --profile ${sensor.profile}`)}
+                            onClick={() => navigator.clipboard.writeText(`curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key ${sensor.registrationKey} --ip ${sensor.ipAddress} --name "${sensor.name}" --profile ${sensor.profile}`)}
                             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
                           >
-                            <CopyIcon className="h-4 w-4" />
+                            <ClipboardDocumentIcon className="h-4 w-4" />
                           </button>
                         </div>
                       </div>

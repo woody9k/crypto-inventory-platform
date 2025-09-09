@@ -175,33 +175,6 @@ services:
       - crypto-network
     restart: unless-stopped
 
-  report-generator:
-    build:
-      context: ./services/report-generator
-      dockerfile: Dockerfile.dev
-    container_name: crypto-report-generator
-    environment:
-      - PORT=8080
-      - ENV=development
-      - DATABASE_URL=postgres://crypto_user:crypto_pass_dev@postgres:5432/crypto_inventory?sslmode=disable
-      - FILE_STORAGE_PATH=/app/reports
-      - NATS_URL=nats://nats_user:nats_pass_dev@nats:4222
-      - LOG_LEVEL=debug
-    ports:
-      - "8084:8080"
-    depends_on:
-      postgres:
-        condition: service_healthy
-      nats:
-        condition: service_healthy
-    volumes:
-      - ./services/report-generator:/app
-      - /app/vendor
-      - report_storage:/app/reports
-    networks:
-      - crypto-network
-    restart: unless-stopped
-
   sensor-manager:
     build:
       context: ./services/sensor-manager
@@ -262,6 +235,7 @@ services:
     volumes:
       - ./services/report-generator:/app
       - /app/vendor
+      - report_storage:/app/reports
     networks:
       - crypto-network
     restart: unless-stopped

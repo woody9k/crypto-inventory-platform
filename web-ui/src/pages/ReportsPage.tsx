@@ -3,7 +3,6 @@ import {
   DocumentTextIcon,
   ChartBarIcon,
   ShieldCheckIcon,
-  NetworkIcon,
   ExclamationTriangleIcon,
   ArrowDownTrayIcon,
   EyeIcon,
@@ -56,7 +55,7 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
   const [templates, setTemplates] = useState<ReportTemplate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [selectedTemplate, setSelectedTemplate] = useState<ReportTemplate | null>(null);
+  const [, setSelectedTemplate] = useState<ReportTemplate | null>(null);
 
   // Load mock data for demonstration purposes
   // In production, this would make API calls to fetch real data
@@ -146,18 +145,18 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
    * @param status - The report status (generating, completed, failed)
    * @returns JSX element representing the status icon
    */
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-      case 'generating':
-        return <ClockIcon className="h-5 w-5 text-yellow-500" />;
-      case 'failed':
-        return <XCircleIcon className="h-5 w-5 text-red-500" />;
-      default:
-        return <ClockIcon className="h-5 w-5 text-gray-500" />;
-    }
-  };
+  // const _getStatusIcon = (status: string) => {
+  //   switch (status) {
+  //     case 'completed':
+  //       return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+  //     case 'generating':
+  //       return <ClockIcon className="h-5 w-5 text-yellow-500" />;
+  //     case 'failed':
+  //       return <XCircleIcon className="h-5 w-5 text-red-500" />;
+  //     default:
+  //       return <ClockIcon className="h-5 w-5 text-gray-500" />;
+  //   }
+  // };
 
   /**
    * Returns the appropriate CSS classes for a given report status.
@@ -189,7 +188,7 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
       case 'compliance_status':
         return <ShieldCheckIcon className="h-6 w-6 text-green-500" />;
       case 'network_topology':
-        return <NetworkIcon className="h-6 w-6 text-purple-500" />;
+        return <ChartBarIcon className="h-6 w-6 text-purple-500" />;
       case 'risk_assessment':
         return <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />;
       default:

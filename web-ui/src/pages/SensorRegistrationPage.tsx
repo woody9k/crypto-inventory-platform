@@ -4,10 +4,9 @@ import {
   ClockIcon, 
   CheckCircleIcon, 
   ExclamationTriangleIcon,
-  CopyIcon,
+  ClipboardDocumentIcon,
   TrashIcon,
-  EyeIcon,
-  EyeSlashIcon
+  CogIcon,
 } from '@heroicons/react/24/outline';
 
 interface PendingSensor {
@@ -78,7 +77,7 @@ const SensorRegistrationPage: React.FC = () => {
         createdAt: '2024-12-15T10:00:00Z',
         expiresAt: '2024-12-15T11:00:00Z',
         status: 'pending',
-        installationCommand: 'sudo ./install-sensor.sh --key REG-tenant-123-20241215-A7B3C9 --ip 192.168.1.100'
+        installationCommand: 'curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key REG-tenant-123-20241215-A7B3C9 --ip 192.168.1.100 --name "Datacenter Sensor 1" --profile datacenter_host'
       },
       {
         id: 'pending-002',
@@ -91,7 +90,7 @@ const SensorRegistrationPage: React.FC = () => {
         createdAt: '2024-12-15T09:30:00Z',
         expiresAt: '2024-12-15T10:30:00Z',
         status: 'pending',
-        installationCommand: 'sudo ./install-sensor.sh --key REG-tenant-123-20241215-B8C4D0 --ip 10.0.1.50'
+        installationCommand: 'curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key REG-tenant-123-20241215-B8C4D0 --ip 10.0.1.50 --name "Cloud Sensor 1" --profile cloud_vm'
       },
       {
         id: 'pending-003',
@@ -104,7 +103,7 @@ const SensorRegistrationPage: React.FC = () => {
         createdAt: '2024-12-15T08:00:00Z',
         expiresAt: '2024-12-15T09:00:00Z',
         status: 'expired',
-        installationCommand: 'sudo ./install-sensor.sh --key REG-tenant-123-20241215-C9D5E1 --ip 192.168.0.25'
+        installationCommand: 'curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key REG-tenant-123-20241215-C9D5E1 --ip 192.168.0.25 --name "Edge Sensor 1" --profile edge_device'
       }
     ];
 
@@ -168,13 +167,7 @@ const SensorRegistrationPage: React.FC = () => {
     
     return {
       // Direct download and run - one-line installation
-      curlCommand: `curl -sSL ${controlPlaneURL}/scripts/install-sensor.sh | sudo bash -s -- \\
-  --key ${sensor.registrationKey} \\
-  --ip ${sensor.ipAddress} \\
-  --name ${sensor.name} \\
-  --profile ${sensor.profile} \\
-  --interfaces "${interfaces}" \\
-  --url ${controlPlaneURL}`,
+      curlCommand: `curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key ${sensor.registrationKey} --ip ${sensor.ipAddress} --name "${sensor.name}" --profile ${sensor.profile}`,
       
       // Interactive mode - guided installation with prompts
       interactiveCommand: `curl -sSL ${controlPlaneURL}/scripts/install-sensor.sh | sudo bash -s -- --interactive`,
@@ -220,7 +213,7 @@ sudo ./install-sensor.sh \\
       createdAt: now.toISOString(),
       expiresAt: expiresAt.toISOString(),
       status: 'pending',
-      installationCommand: `sudo ./install-sensor.sh --key ${key} --ip ${formData.ipAddress} --name ${formData.name} --profile ${formData.profile}`
+      installationCommand: `curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key ${key} --ip ${formData.ipAddress} --name "${formData.name}" --profile ${formData.profile}`
     };
 
     setPendingSensors([...pendingSensors, newSensor]);
@@ -409,14 +402,14 @@ sudo ./install-sensor.sh \\
                       onClick={() => copyToClipboard(sensor.registrationKey)}
                       className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                     >
-                      <CopyIcon className="h-4 w-4 mr-1" />
+                      <ClipboardDocumentIcon className="h-4 w-4 mr-1" />
                       Copy Key
                     </button>
                     <button
                       onClick={() => copyToClipboard(sensor.installationCommand)}
                       className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                     >
-                      <CopyIcon className="h-4 w-4 mr-1" />
+                      <ClipboardDocumentIcon className="h-4 w-4 mr-1" />
                       Copy Command
                     </button>
                     <button
@@ -453,7 +446,7 @@ sudo ./install-sensor.sh \\
                                 onClick={() => copyToClipboard(commands.curlCommand)}
                                 className="ml-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
                               >
-                                <CopyIcon className="h-4 w-4" />
+                                <ClipboardDocumentIcon className="h-4 w-4" />
                               </button>
                             </div>
                           </div>
@@ -473,7 +466,7 @@ sudo ./install-sensor.sh \\
                                 onClick={() => copyToClipboard(commands.interactiveCommand)}
                                 className="ml-2 text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-200"
                               >
-                                <CopyIcon className="h-4 w-4" />
+                                <ClipboardDocumentIcon className="h-4 w-4" />
                               </button>
                             </div>
                           </div>
@@ -493,7 +486,7 @@ sudo ./install-sensor.sh \\
                                 onClick={() => copyToClipboard(commands.manualCommand)}
                                 className="ml-2 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200"
                               >
-                                <CopyIcon className="h-4 w-4" />
+                                <ClipboardDocumentIcon className="h-4 w-4" />
                               </button>
                             </div>
                           </div>

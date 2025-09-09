@@ -29,9 +29,9 @@ import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { AssetsPage } from './pages/AssetsPage';
-import { SensorManagementPage } from './pages/SensorManagementPage';
-import { SensorRegistrationPage } from './pages/SensorRegistrationPage';
-import { ReportsPage } from './pages/ReportsPage';
+import SensorManagementPage from './pages/SensorManagementPage';
+import SensorRegistrationPage from './pages/SensorRegistrationPage';
+import ReportsPage from './pages/ReportsPage';
 
 // Create a query client instance with optimized defaults for crypto inventory data
 const queryClient = new QueryClient({
@@ -84,6 +84,9 @@ const AppRouter: React.FC = () => {
         {/* Public routes */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        
+        {/* Default route - redirect to dashboard */}
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
         
         {/* Protected routes */}
         <Route
