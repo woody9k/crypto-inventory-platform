@@ -54,6 +54,16 @@ export const Header: React.FC = () => {
                 >
                   Assets
                 </Link>
+                <Link
+                  to="/sensors"
+                  className={`text-sm font-medium transition-colors ${
+                    location.pathname.startsWith('/sensors')
+                      ? 'text-primary-600 dark:text-primary-400'
+                      : 'text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400'
+                  }`}
+                >
+                  Sensors
+                </Link>
               </nav>
             )}
           </div>

@@ -1,4 +1,4 @@
-import { api } from './api';
+import api from './api';
 import { Asset, AssetsResponse, RiskSummary, AssetFilters, CryptoImplementation } from '../types/inventory';
 
 export const inventoryApi = {

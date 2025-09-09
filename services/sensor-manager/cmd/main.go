@@ -9,6 +9,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/democorp/crypto-inventory/services/sensor-manager/internal/handlers"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,16 +20,60 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
+	// Initialize handlers
+	handler := handlers.NewHandler()
+
 	// Initialize router
 	router := gin.Default()
-	
+
+	// CORS middleware
+	router.Use(cors.New(cors.Config{
+		AllowOrigins:     []string{"*"},
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
+
 	// Health check
-	router.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status":  "healthy",
-			"service": "sensor-manager",
-		})
-	})
+	router.GET("/health", handler.Health)
+
+	// API routes
+	api := router.Group("/api/v1")
+	{
+		// Registration management
+		api.POST("/sensors/pending", handler.CreatePendingSensor)
+		api.GET("/sensors/pending", handler.GetPendingSensors)
+		api.DELETE("/sensors/pending/:key", handler.DeletePendingSensor)
+
+		// Admin settings
+		api.GET("/admin/settings", handler.GetAdminSettings)
+		api.PUT("/admin/settings", handler.UpdateAdminSettings)
+
+		// Sensor registration
+		api.POST("/sensors/register", handler.RegisterSensor)
+
+		// Sensor-specific routes
+		sensors := api.Group("/sensors/:sensor_id")
+		{
+			// Outbound-only communication endpoints
+			sensors.POST("/heartbeat", handler.Heartbeat)
+			sensors.GET("/commands", handler.PollCommands)
+			sensors.POST("/commands/:command_id/ack", handler.AcknowledgeCommand)
+			sensors.GET("/webhook-config", handler.GetWebhookConfig)
+
+			// Discovery submission
+			sensors.POST("/discoveries", handler.SubmitDiscoveries)
+
+			// Air-gapped export
+			sensors.POST("/exports", handler.SubmitAirGappedExport)
+
+			// Legacy endpoints (for backward compatibility)
+			sensors.POST("/health", handler.ReportHealth)
+			sensors.GET("/config", handler.GetSensorConfig)
+		}
+	}
 
 	// Setup server
 	port := os.Getenv("PORT")
@@ -42,7 +88,8 @@ func main() {
 
 	// Start server
 	go func() {
-		log.Printf("sensor-manager starting on port %s", port)
+		log.Printf("🚀 Sensor Manager starting on port %s", port)
+		log.Printf("📡 Ready to manage network sensors")
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Failed to start server: %v", err)
 		}

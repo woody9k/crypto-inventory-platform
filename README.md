@@ -25,6 +25,10 @@ This platform helps organizations:
 ### Network Sensor
 - **Cross-Platform**: Windows, Linux, macOS, ARM support
 - **Flexible Deployment**: Native binaries, containers, Windows Services, systemd
+- **Interactive Installation**: Guided setup with `--interactive` mode
+- **One-Line Installation**: Copy-paste commands from web UI
+- **IP Validation**: Secure registration with IP address binding
+- **Outbound-Only Communication**: No inbound firewall rules required
 - **Passive Analysis**: TLS, SSH, IPSec, VPN discovery
 - **Edge AI**: Local anomaly detection capabilities
 
@@ -156,6 +160,8 @@ make test-load
 - [Architecture Overview](./architecture_docs/02_system_architecture.md)
 - [API Documentation](./architecture_docs/05_api_specifications.md)
 - [Deployment Guide](./architecture_docs/06_deployment_guide.md)
+- [Sensor Management Guide](./SENSOR_MANAGEMENT_GUIDE.md)
+- [Security Architecture](./SECURITY_ARCHITECTURE.md)
 - [Development Setup](./docs/development.md)
 
 ## 🤝 Contributing
