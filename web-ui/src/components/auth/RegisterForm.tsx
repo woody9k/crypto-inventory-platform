@@ -20,6 +20,9 @@ const registerSchema = z.object({
   first_name: z.string().min(1, 'First name is required'),
   last_name: z.string().min(1, 'Last name is required'),
   tenant_name: z.string().min(2, 'Company name must be at least 2 characters'),
+  agreeToTerms: z.boolean().refine(val => val === true, {
+    message: 'You must agree to the Terms of Service and Privacy Policy'
+  }),
 });
 
 type RegisterFormData = z.infer<typeof registerSchema>;
@@ -39,7 +42,9 @@ export const RegisterForm: React.FC = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     try {
-      await registerUser(data);
+      // Remove agreeToTerms from the data before sending to API
+      const { agreeToTerms, ...registrationData } = data;
+      await registerUser(registrationData);
       navigate('/login', { 
         state: { message: 'Registration successful! Please log in with your credentials.' }
       });
@@ -130,13 +135,12 @@ export const RegisterForm: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center">
+        <div className="flex items-start">
           <input
             id="agree-to-terms"
-            name="agree-to-terms"
             type="checkbox"
-            required
-            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+            className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded mt-0.5"
+            {...register('agreeToTerms')}
           />
           <label htmlFor="agree-to-terms" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">
             I agree to the{' '}
@@ -149,6 +153,11 @@ export const RegisterForm: React.FC = () => {
             </Link>
           </label>
         </div>
+        {errors.agreeToTerms && (
+          <p className="text-sm text-red-600 dark:text-red-400">
+            {errors.agreeToTerms.message}
+          </p>
+        )}
 
         <Button
           type="submit"
