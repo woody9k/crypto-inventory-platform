@@ -46,6 +46,13 @@ docker-compose ps
 - **Grafana Dashboard**: http://localhost:3001 (admin/admin123)
 - **Database Admin**: http://localhost:8090
 
+### **Reports System**
+The platform includes a comprehensive reports system accessible at `/reports`:
+- **Report Types**: Crypto summary, compliance status, network topology, risk assessment, certificate audit
+- **Report Generation**: Create reports on-demand with various templates
+- **Report Management**: View, download, and delete generated reports
+- **API Endpoints**: All report operations available via `/api/v1/reports/` through the API gateway
+
 ### Default Credentials
 
 **Tenant Users** (Demo Corporation):
@@ -95,7 +102,11 @@ docker-compose ps
 ├── services/                    # Backend services
 │   ├── auth-service/           # Tenant authentication (port 8081)
 │   ├── inventory-service/      # Asset management (port 8082)
-│   └── saas-admin-service/     # Platform administration (port 8084)
+│   ├── report-generator/       # Report generation service (port 8083)
+│   ├── saas-admin-service/     # Platform administration (port 8084)
+│   ├── sensor-manager/         # Sensor management (port 8085)
+│   ├── ai-analysis-service/    # AI analysis (port 8087)
+│   └── compliance-engine/      # Compliance engine (port 8088)
 ├── web-ui/                     # Tenant React application (port 3001)
 ├── saas-admin-ui/              # Platform admin interface (port 3002)
 ├── scripts/                    # Database scripts and migrations
@@ -348,3 +359,24 @@ or
 ```
 npm run test
 ```
+
+## 🔧 Troubleshooting
+
+### Reports Page Issues
+If the reports page shows blank or fails to load:
+1. **Check API Gateway**: Ensure API gateway is running and accessible at http://localhost:8080
+2. **Check Report Service**: Verify report-generator service is healthy: `docker-compose ps report-generator`
+3. **Test API Endpoints**: 
+   - Reports list: `curl http://localhost:8080/api/v1/reports/`
+   - Templates: `curl http://localhost:8080/api/v1/reports/templates`
+4. **Check Logs**: Review API gateway logs: `docker-compose logs api-gateway`
+
+### Service Communication
+- All frontend API calls route through the API gateway (port 8080)
+- The API gateway proxies requests to individual services
+- Report service runs on port 8083 (different from other services on 8080)
+
+### Common Issues
+- **Blank Reports Page**: Usually indicates API gateway routing issues
+- **Authentication Errors**: Check if auth service is running and database is seeded
+- **Service Health Issues**: Use `docker-compose ps` to check all service statuses

@@ -1,5 +1,6 @@
-// Reports API client: integrates with report-generator service (default http://localhost:8083/api/v1)
-// Provides list, get, generate, delete, and templates operations used by ReportsPage.
+// Reports API client: integrates with report-generator service via API gateway
+// Routes through API gateway at http://localhost:8080/api/v1/reports/ for proper load balancing
+// and authentication. Provides list, get, generate, delete, and templates operations used by ReportsPage.
 import api from './api';
 
 export interface ReportItem {
@@ -20,7 +21,8 @@ export interface ReportTemplateItem {
   category: string;
 }
 
-const REPORTS_BASE = 'http://localhost:8083/api/v1';
+// API gateway endpoint for reports service
+const REPORTS_BASE = 'http://localhost:8080/api/v1';
 
 export const reportsApi = {
   async list(): Promise<ReportItem[]> {
