@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -37,9 +38,10 @@ func Load() (*Config, error) {
 	}
 	config.JWTExpiry = jwtExpiry
 
-	// Parse CORS origins
-	corsOrigins := getEnv("CORS_ORIGINS", "http://localhost:3000")
-	config.CORSOrigins = []string{corsOrigins}
+	// Parse CORS origins - supports multiple origins for development and production
+	// Default includes both standard port 3000 and Vite dev server port 5174
+	corsOrigins := getEnv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5174")
+	config.CORSOrigins = strings.Split(corsOrigins, ",")
 
 	return config, nil
 }

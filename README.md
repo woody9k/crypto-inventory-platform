@@ -46,6 +46,14 @@ docker-compose ps
 - **Grafana Dashboard**: http://localhost:3001 (admin/admin123)
 - **Database Admin**: http://localhost:8090
 
+### **UI Design System**
+The platform features a modern, professional UI with a Black, Gold, and Red color scheme:
+- **Primary (Gold)**: Rich gold tones for main actions and branding
+- **Secondary (Black)**: Deep blacks and grays for backgrounds and text  
+- **Accent (Red)**: Vibrant red for highlights, alerts, and important actions
+
+The UI includes full dark mode support and is fully responsive across all devices.
+
 ### **Reports System**
 The platform includes a comprehensive reports system accessible at `/reports`:
 - **Report Types**: Crypto summary, compliance status, network topology, risk assessment, certificate audit
