@@ -480,7 +480,7 @@ BEGIN
     RAISE NOTICE 'Database seeded successfully with demo data!';
     RAISE NOTICE 'Demo tenant: demo-corp';
     RAISE NOTICE 'Demo users: admin@democorp.com, analyst@democorp.com, viewer@democorp.com';
-    RAISE NOTICE 'Password for all demo users: admin123';
+    RAISE NOTICE 'Password for all demo users: admin123 (Argon2id hashed)';
     RAISE NOTICE 'Created % network assets', (SELECT COUNT(*) FROM network_assets);
     RAISE NOTICE 'Created % crypto implementations', (SELECT COUNT(*) FROM crypto_implementations);
     RAISE NOTICE 'Created % certificates', (SELECT COUNT(*) FROM certificates);

@@ -21,5 +21,8 @@
     "noFallthroughCasesInSwitch": true
   },
   "include": ["src"],
+  // Exclude test files from production build to avoid TypeScript compilation errors
+  // Test files use Vitest globals (describe, it, expect) which aren't available during build
+  "exclude": ["src/**/__tests__/**/*", "src/**/*.test.*", "src/**/*.spec.*"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

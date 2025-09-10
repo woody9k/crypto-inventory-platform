@@ -16,7 +16,9 @@ var (
 	ErrInvalidHash     = errors.New("invalid hash format")
 )
 
-// PasswordService handles password hashing and verification
+// PasswordService handles password hashing and verification using Argon2id
+// Note: This service uses Argon2id format, not bcrypt. Database passwords must be
+// in Argon2id format: $argon2id$v=19$m=65536,t=3,p=2$salt$hash
 type PasswordService struct {
 	memory      uint32
 	iterations  uint32

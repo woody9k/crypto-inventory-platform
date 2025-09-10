@@ -31,28 +31,27 @@ cd crypto-inventory-platform
 
 2. **Start the platform**:
 ```bash
-# Start all backend services
+# Start all services (including frontend)
 docker-compose up -d
 
-# Start tenant UI (in one terminal)
-cd web-ui
-npm install
-npm run dev
-
-# Start SaaS admin UI (in another terminal)
-cd saas-admin-ui
-python3 -m http.server 3002
+# Verify all services are running
+docker-compose ps
 ```
 
+**Note**: The platform now runs entirely in Docker containers. The frontend is served by nginx on port 3000.
+
 3. **Access the platform**:
-- **Tenant UI**: http://localhost:3001
-- **SaaS Admin Console**: http://localhost:3002/simple.html
+- **Main Application**: http://localhost:3000
+- **API Gateway**: http://localhost:8080
+- **Grafana Dashboard**: http://localhost:3001 (admin/admin123)
+- **Database Admin**: http://localhost:8090
 
 ### Default Credentials
 
-**Tenant Users**:
-- Email: `demo@example.com`
-- Password: `demo123`
+**Tenant Users** (Demo Corporation):
+- **Admin**: `admin@democorp.com` / `admin123`
+- **Analyst**: `analyst@democorp.com` / `admin123`  
+- **Viewer**: `viewer@democorp.com` / `admin123`
 
 **Platform Admins**:
 - Email: `admin@crypto-inventory.com`

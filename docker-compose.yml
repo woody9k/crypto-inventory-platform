@@ -344,7 +344,6 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin123
       - GF_SECURITY_ADMIN_USER=admin
-      - GF_INSTALL_PLUGINS=grafana-influxdb-datasource
     ports:
       - "3001:3000"
     volumes:
