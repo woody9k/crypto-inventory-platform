@@ -7,6 +7,9 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 
+# Copy handler first to invalidate cache when it changes
+COPY internal/handlers/outbound.go internal/handlers/outbound.go
+# Copy remainder of source
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o main ./cmd/main.go
 

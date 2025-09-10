@@ -132,6 +132,6 @@ func (h *Handler) SubmitAirGappedExport(c *gin.Context) {
 		"status":    "success",
 		"message":   "Air-gapped export received",
 		"export_id": export.ExportID,
-		"records":   export.Metadata.RecordCount,
+		"records":   len(export.Data),
 	})
 }

@@ -1,8 +1,8 @@
-// Sensors API client: integrates with sensor-manager service (default http://localhost:8080/api/v1)
+// Sensors API client: integrates with sensor-manager service (default http://localhost:8085/api/v1)
 // Supports pending registration key lifecycle and sensor registration.
 import api from './api';
 
-const SENSOR_BASE = 'http://localhost:8080/api/v1';
+const SENSOR_BASE = 'http://localhost:8085/api/v1';
 
 export interface PendingSensorPayload {
   name: string;

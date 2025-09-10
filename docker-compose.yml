@@ -164,7 +164,7 @@ services:
       - NATS_URL=nats://nats_user:nats_pass_dev@nats:4222
       - LOG_LEVEL=debug
     ports:
-      - "8083:8080"
+      - "8088:8080"
     depends_on:
       postgres:
         condition: service_healthy
