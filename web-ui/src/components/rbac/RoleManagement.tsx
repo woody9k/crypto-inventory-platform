@@ -1,15 +1,18 @@
 /**
- * Role Management Component
+ * Tenant Role Management Component
  * 
- * Provides a comprehensive interface for managing user roles and permissions
- * in a multi-tenant SaaS environment. This component handles:
+ * Provides a comprehensive interface for managing tenant-level user roles and permissions.
+ * This component handles tenant organization role management only.
  * 
  * Features:
- * - Role creation and management
+ * - Tenant role creation and management
  * - Permission assignment and modification
- * - User role assignments
+ * - Tenant user role assignments
  * - Permission matrix visualization
  * - Real-time permission updates
+ * 
+ * Note: This is for tenant-level management only. Platform admin functions
+ * are available in the separate SaaS Admin Console.
  * 
  * Architecture:
  * - Mock data for demonstration (replace with API calls)

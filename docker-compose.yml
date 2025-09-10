@@ -355,6 +355,34 @@ services:
     networks:
       - crypto-network
 
+  # =================================================================
+  # SaaS Admin Service
+  # =================================================================
+  saas-admin-service:
+    build:
+      context: ./services/saas-admin-service
+      dockerfile: Dockerfile.dev
+    container_name: crypto-saas-admin-service
+    environment:
+      - PORT=8084
+      - ENV=development
+      - DATABASE_URL=postgres://crypto_user:crypto_pass_dev@postgres:5432/crypto_inventory?sslmode=disable
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - LOG_LEVEL=debug
+    ports:
+      - "8084:8084"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./services/saas-admin-service:/app
+      - /app/vendor
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
 # =================================================================
 # Volumes
 # =================================================================

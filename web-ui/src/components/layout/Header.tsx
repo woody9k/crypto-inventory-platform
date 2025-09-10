@@ -84,6 +84,14 @@ export const Header: React.FC = () => {
                 >
                   Roles
                 </Link>
+                <a
+                  href="http://localhost:3002/simple.html"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-primary-600 dark:hover:text-primary-400 transition-colors"
+                >
+                  SaaS Admin
+                </a>
               </nav>
             )}
           </div>

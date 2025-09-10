@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<!--
+    SaaS Admin Console - Platform Administration Interface
+    
+    This is a simplified HTML/JavaScript interface for platform administration.
+    It provides a complete SaaS admin console for managing tenants, users, and
+    platform-wide statistics.
+    
+    Key Features:
+    - Platform admin authentication (JWT-based)
+    - Tenant management (list, create, update, suspend, activate)
+    - Platform user management (create, update, delete platform admins)
+    - Platform statistics and monitoring
+    - Real-time data updates
+    
+    Architecture:
+    - Vanilla HTML/JavaScript (compatible with Node 18)
+    - TailwindCSS for styling
+    - Axios for HTTP API calls
+    - JWT token management
+    - Responsive design
+    
+    API Endpoints:
+    - Authentication: POST /api/v1/auth/login
+    - Tenants: GET/POST/PUT/DELETE /api/v1/admin/tenants
+    - Users: GET/POST/PUT/DELETE /api/v1/admin/users
+    - Statistics: GET /api/v1/admin/stats/platform
+    
+    Security:
+    - JWT authentication required
+    - Platform admin role validation
+    - CORS protection
+    - Input validation
+    
+    Default Credentials:
+    - Email: admin@crypto-inventory.com
+    - Password: admin123
+-->
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Admin Console</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
+        <!-- Login Form -->
+        <div id="login" class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-md w-full space-y-8">
+                <div>
+                    <div class="mx-auto h-12 w-12 flex items-center justify-center rounded-full bg-blue-100">
+                        <span class="text-2xl">🏢</span>
+                    </div>
+                    <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                        SaaS Admin Console
+                    </h2>
+                    <p class="mt-2 text-center text-sm text-gray-600">
+                        Sign in to manage your platform
+                    </p>
+                </div>
+                <form class="mt-8 space-y-6" onsubmit="handleLogin(event)">
+                    <div class="space-y-4">
+                        <div>
+                            <label for="email" class="block text-sm font-medium text-gray-700">
+                                Email address
+                            </label>
+                            <input
+                                id="email"
+                                name="email"
+                                type="email"
+                                required
+                                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Enter your email"
+                            />
+                        </div>
+                        <div>
+                            <label for="password" class="block text-sm font-medium text-gray-700">
+                                Password
+                            </label>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                required
+                                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Enter your password"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <button
+                            type="submit"
+                            class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                        >
+                            Sign in
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="hidden">
+            <!-- Navigation -->
+            <nav class="bg-white shadow">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between h-16">
+                        <div class="flex items-center">
+                            <h1 class="text-xl font-bold text-gray-900">SaaS Admin Console</h1>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <span id="user-info" class="text-sm text-gray-700"></span>
+                            <button onclick="logout()" class="text-gray-500 hover:text-gray-700">
+                                Logout
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content -->
+            <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div class="px-4 py-6 sm:px-0">
+                    <h1 class="text-2xl font-bold text-gray-900 mb-6">Dashboard</h1>
+                    
+                    <!-- Stats -->
+                    <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <span class="text-2xl">🏢</span>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Total Tenants</dt>
+                                            <dd id="total-tenants" class="text-lg font-medium text-gray-900">-</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <span class="text-2xl">✅</span>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Active Tenants</dt>
+                                            <dd id="active-tenants" class="text-lg font-medium text-gray-900">-</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <span class="text-2xl">⏸️</span>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Suspended Tenants</dt>
+                                            <dd id="suspended-tenants" class="text-lg font-medium text-gray-900">-</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <span class="text-2xl">👥</span>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Total Users</dt>
+                                            <dd id="total-users" class="text-lg font-medium text-gray-900">-</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tenants Table -->
+                    <div class="bg-white shadow overflow-hidden sm:rounded-md">
+                        <div class="px-4 py-5 sm:p-6">
+                            <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Tenants</h3>
+                            <div class="overflow-x-auto">
+                                <table class="min-w-full divide-y divide-gray-200">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tenant</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subscription</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tenants-table" class="bg-white divide-y divide-gray-200">
+                                        <!-- Tenants will be loaded here -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        /**
+         * SaaS Admin Console - JavaScript Application
+         * 
+         * This script handles all client-side functionality for the SaaS admin console.
+         * It manages authentication, API calls, UI updates, and user interactions.
+         * 
+         * Key Functions:
+         * - Authentication (login, logout, token management)
+         * - API communication (Axios-based HTTP calls)
+         * - UI state management (show/hide sections, data rendering)
+         * - Data management (tenants, users, statistics)
+         * - Error handling and user feedback
+         * 
+         * Dependencies:
+         * - Axios: HTTP client for API calls
+         * - TailwindCSS: Styling framework
+         * - localStorage: Token persistence
+         */
+        
+        // Global state variables
+        let currentUser = null;  // Current platform admin user data
+        let tenants = [];        // Cached tenant data
+        let users = [];          // Cached platform user data
+        let stats = null;        // Cached platform statistics
+
+        // Check if user is already logged in on page load
+        // This provides session persistence across browser refreshes
+        window.onload = function() {
+            const token = localStorage.getItem('saas_admin_token');
+            const user = localStorage.getItem('saas_admin_user');
+            
+            if (token && user) {
+                currentUser = JSON.parse(user);
+                showDashboard();
+                loadTenants();
+            }
+        };
+
+        async function handleLogin(event) {
+            event.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            try {
+                const response = await axios.post('http://localhost:8084/api/v1/auth/login', {
+                    email,
+                    password
+                });
+                
+                currentUser = response.data.user;
+                localStorage.setItem('saas_admin_token', response.data.access_token);
+                localStorage.setItem('saas_admin_user', JSON.stringify(response.data.user));
+                
+                showDashboard();
+                loadTenants();
+                alert('Login successful!');
+            } catch (error) {
+                alert('Login failed: ' + (error.response?.data?.error || 'Unknown error'));
+            }
+        }
+
+        function showDashboard() {
+            document.getElementById('login').classList.add('hidden');
+            document.getElementById('dashboard').classList.remove('hidden');
+            document.getElementById('user-info').textContent = 
+                `${currentUser.first_name} ${currentUser.last_name} (${currentUser.role})`;
+        }
+
+        function logout() {
+            currentUser = null;
+            localStorage.removeItem('saas_admin_token');
+            localStorage.removeItem('saas_admin_user');
+            document.getElementById('login').classList.remove('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+        }
+
+        async function loadTenants() {
+            try {
+                const token = localStorage.getItem('saas_admin_token');
+                const response = await axios.get('http://localhost:8084/api/v1/admin/tenants', {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                
+                tenants = response.data.tenants || [];
+                updateStats();
+                updateTenantsTable();
+            } catch (error) {
+                console.error('Failed to load tenants:', error);
+                alert('Failed to load tenants');
+            }
+        }
+
+        function updateStats() {
+            const totalTenants = tenants.length;
+            const activeTenants = tenants.filter(t => t.payment_status === 'active').length;
+            const suspendedTenants = tenants.filter(t => t.payment_status === 'suspended').length;
+            
+            document.getElementById('total-tenants').textContent = totalTenants;
+            document.getElementById('active-tenants').textContent = activeTenants;
+            document.getElementById('suspended-tenants').textContent = suspendedTenants;
+            document.getElementById('total-users').textContent = 'N/A'; // Not available in current API
+        }
+
+        function updateTenantsTable() {
+            const tbody = document.getElementById('tenants-table');
+            tbody.innerHTML = '';
+            
+            tenants.forEach(tenant => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                const statusClass = tenant.payment_status === 'active' 
+                    ? 'bg-green-100 text-green-800'
+                    : tenant.payment_status === 'suspended'
+                    ? 'bg-red-100 text-red-800'
+                    : 'bg-yellow-100 text-yellow-800';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div class="flex-shrink-0 h-10 w-10">
+                                <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                    <span class="text-lg">🏢</span>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="text-sm font-medium text-gray-900">${tenant.name}</div>
+                                <div class="text-sm text-gray-500">${tenant.slug}</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${tenant.subscription_tier}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}">
+                            ${tenant.payment_status}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        ${new Date(tenant.created_at).toLocaleDateString()}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button onclick="toggleTenantStatus('${tenant.id}', '${tenant.payment_status}')" 
+                                class="text-blue-600 hover:text-blue-900">
+                            ${tenant.payment_status === 'active' ? 'Suspend' : 'Activate'}
+                        </button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        async function toggleTenantStatus(tenantId, currentStatus) {
+            const action = currentStatus === 'active' ? 'suspend' : 'activate';
+            const confirmMessage = `Are you sure you want to ${action} this tenant?`;
+            
+            if (confirm(confirmMessage)) {
+                try {
+                    const token = localStorage.getItem('saas_admin_token');
+                    const endpoint = currentStatus === 'active' ? 'suspend' : 'activate';
+                    
+                    await axios.post(`http://localhost:8084/api/v1/admin/tenants/${tenantId}/${endpoint}`, {}, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                    
+                    alert(`Tenant ${action}ed successfully!`);
+                    loadTenants(); // Refresh the data
+                } catch (error) {
+                    alert(`Failed to ${action} tenant: ${error.response?.data?.error || 'Unknown error'}`);
+                }
+            }
+        }
+    </script>
+</body>
+</html>

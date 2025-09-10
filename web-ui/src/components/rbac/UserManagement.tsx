@@ -1,15 +1,19 @@
 /**
- * User Management Component
+ * Tenant User Management Component
  * 
  * Provides comprehensive user management capabilities for tenant administrators.
- * This component handles user lifecycle management, role assignments, and user status.
+ * This component handles tenant user lifecycle management, role assignments, and user status
+ * within the current tenant organization only.
  * 
  * Features:
- * - User listing with role assignments
- * - Role assignment and removal
+ * - Tenant user listing with role assignments
+ * - Tenant role assignment and removal
  * - User activation/deactivation
  * - Role management modal
  * - User status tracking
+ * 
+ * Note: This is for tenant-level user management only. Platform admin functions
+ * are available in the separate SaaS Admin Console.
  * 
  * Architecture:
  * - Mock data for demonstration (replace with API calls)

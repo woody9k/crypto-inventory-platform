@@ -1,61 +1,33 @@
-# 🔐 Crypto Inventory Platform API Documentation
+# API Documentation
 
-*Version: 1.0*  
 *Last Updated: 2025-01-09*
+*Platform: Crypto Inventory Management System*
 
-## 📋 Overview
+## 🎯 Overview
 
-The Crypto Inventory Platform provides a comprehensive REST API for managing cryptographic assets, user authentication, and compliance reporting. The API follows RESTful principles and uses JWT-based authentication with multi-tenant support.
+This document provides comprehensive API documentation for all services in the crypto inventory management platform, including the newly implemented SaaS admin service.
 
-### **Base URLs**
-- **Auth Service**: `http://localhost:8081`
-- **Inventory Service**: `http://localhost:8082`
-- **Compliance Engine**: `http://localhost:8083` (Coming Soon)
-- **Report Generator**: `http://localhost:8084` (Coming Soon)
-- **Sensor Manager**: `http://localhost:8085` (Coming Soon)
+## 📋 Table of Contents
 
-### **Authentication**
-All API endpoints (except health checks) require JWT authentication via the `Authorization` header:
-```
-Authorization: Bearer <access_token>
-```
-
-### **Response Format**
-All responses follow this structure:
-```json
-{
-  "data": {}, // Response data (varies by endpoint)
-  "message": "Success", // Human-readable message
-  "error": null, // Error details if applicable
-  "timestamp": "2025-01-09T10:30:00Z"
-}
-```
+1. [Authentication Service API](#authentication-service-api)
+2. [Inventory Service API](#inventory-service-api)
+3. [SaaS Admin Service API](#saas-admin-service-api)
+4. [Common Response Formats](#common-response-formats)
+5. [Error Handling](#error-handling)
+6. [Authentication & Authorization](#authentication--authorization)
 
 ---
 
-## 🔑 Authentication Service API
+## Authentication Service API
 
-### **Health Check**
-```http
-GET /health
-```
-**Description**: Check if the auth service is running  
-**Authentication**: None required  
-**Response**:
-```json
-{
-  "status": "healthy",
-  "service": "auth-service",
-  "timestamp": "2025-01-09T10:30:00Z"
-}
-```
+**Base URL**: `http://localhost:8081`
+**Service**: Tenant authentication and user management
 
-### **User Registration**
-```http
-POST /api/v1/auth/register
-```
-**Description**: Create a new user account and tenant  
-**Authentication**: None required  
+### Authentication Endpoints
+
+#### POST /api/v1/auth/register
+Register a new tenant user.
+
 **Request Body**:
 ```json
 {
@@ -63,49 +35,30 @@ POST /api/v1/auth/register
   "password": "SecurePassword123!",
   "first_name": "John",
   "last_name": "Doe",
-  "tenant_name": "Acme Corp"
+  "tenant_name": "Example Corp",
+  "subscription_tier": "professional"
 }
 ```
-**Validation Rules**:
-- `email`: Valid email format, globally unique
-- `password`: 8+ characters, mixed case, numbers, special characters
-- `first_name`: Required, 1+ characters
-- `last_name`: Required, 1+ characters
-- `tenant_name`: Required, 2+ characters
 
 **Response** (201 Created):
 ```json
 {
-  "data": {
-    "user": {
-      "id": "123e4567-e89b-12d3-a456-426614174000",
-      "email": "user@example.com",
-      "first_name": "John",
-      "last_name": "Doe",
-      "role": "admin",
-      "is_active": true,
-      "email_verified": false,
-      "created_at": "2025-01-09T10:30:00Z"
-    },
-    "tenant": {
-      "id": "123e4567-e89b-12d3-a456-426614174001",
-      "name": "Acme Corp",
-      "slug": "acme-corp",
-      "subscription_tier": "trial",
-      "trial_ends_at": "2025-02-09T10:30:00Z"
-    }
-  },
   "message": "User registered successfully",
-  "error": null
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "tenant_id": "uuid",
+    "role": "tenant_owner",
+    "created_at": "2025-01-09T10:00:00Z"
+  }
 }
 ```
 
-### **User Login**
-```http
-POST /api/v1/auth/login
-```
-**Description**: Authenticate user and return JWT tokens  
-**Authentication**: None required  
+#### POST /api/v1/auth/login
+Authenticate a tenant user.
+
 **Request Body**:
 ```json
 {
@@ -113,525 +66,621 @@ POST /api/v1/auth/login
   "password": "SecurePassword123!"
 }
 ```
+
 **Response** (200 OK):
 ```json
 {
-  "data": {
-    "user": {
-      "id": "123e4567-e89b-12d3-a456-426614174000",
-      "email": "user@example.com",
-      "first_name": "John",
-      "last_name": "Doe",
-      "role": "admin",
-      "tenant_id": "123e4567-e89b-12d3-a456-426614174001"
-    },
-    "tokens": {
-      "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-      "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-      "expires_in": 900,
-      "token_type": "Bearer"
-    }
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "tenant_id": "uuid",
+    "role": "tenant_owner",
+    "is_active": true,
+    "email_verified": false,
+    "last_login_at": "2025-01-09T10:00:00Z",
+    "created_at": "2025-01-09T10:00:00Z",
+    "updated_at": "2025-01-09T10:00:00Z"
   },
-  "message": "Login successful",
-  "error": null
+  "access_token": "jwt_token",
+  "refresh_token": "jwt_refresh_token",
+  "expires_in": 86400
 }
 ```
 
-### **Get Current User**
-```http
-GET /api/v1/auth/me
-```
-**Description**: Get current authenticated user information  
-**Authentication**: Required (JWT)  
-**Response** (200 OK):
-```json
-{
-  "data": {
-    "user": {
-      "id": "123e4567-e89b-12d3-a456-426614174000",
-      "email": "user@example.com",
-      "first_name": "John",
-      "last_name": "Doe",
-      "role": "admin",
-      "is_active": true,
-      "email_verified": true,
-      "last_login_at": "2025-01-09T10:30:00Z",
-      "created_at": "2025-01-09T10:30:00Z"
-    },
-    "tenant": {
-      "id": "123e4567-e89b-12d3-a456-426614174001",
-      "name": "Acme Corp",
-      "subscription_tier": "trial",
-      "trial_ends_at": "2025-02-09T10:30:00Z"
-    }
-  },
-  "message": "User information retrieved",
-  "error": null
-}
-```
+#### POST /api/v1/auth/refresh
+Refresh an access token.
 
-### **Refresh Token**
-```http
-POST /api/v1/auth/refresh
-```
-**Description**: Refresh access token using refresh token  
-**Authentication**: None required  
 **Request Body**:
 ```json
 {
-  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-**Response** (200 OK):
-```json
-{
-  "data": {
-    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "expires_in": 900,
-    "token_type": "Bearer"
-  },
-  "message": "Token refreshed successfully",
-  "error": null
+  "refresh_token": "jwt_refresh_token"
 }
 ```
 
-### **Logout**
-```http
-POST /api/v1/auth/logout
-```
-**Description**: Invalidate refresh token and logout user  
-**Authentication**: Required (JWT)  
 **Response** (200 OK):
 ```json
 {
-  "data": null,
-  "message": "Logged out successfully",
-  "error": null
+  "access_token": "new_jwt_token",
+  "expires_in": 86400
+}
+```
+
+### User Management Endpoints
+
+#### GET /api/v1/users
+Get current user information.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "user": {
+    "id": "uuid",
+    "email": "user@example.com",
+    "first_name": "John",
+    "last_name": "Doe",
+    "tenant_id": "uuid",
+    "role": "tenant_owner",
+    "is_active": true,
+    "email_verified": false,
+    "last_login_at": "2025-01-09T10:00:00Z",
+    "created_at": "2025-01-09T10:00:00Z",
+    "updated_at": "2025-01-09T10:00:00Z"
+  }
 }
 ```
 
 ---
 
-## 📊 Inventory Service API
+## Inventory Service API
 
-### **Health Check**
-```http
-GET /health
-```
-**Description**: Check if the inventory service is running  
-**Authentication**: None required  
-**Response**:
-```json
-{
-  "status": "healthy",
-  "service": "inventory-service",
-  "timestamp": "2025-01-09T10:30:00Z"
-}
-```
+**Base URL**: `http://localhost:8082`
+**Service**: Asset and sensor management
 
-### **Get Assets**
-```http
-GET /api/v1/assets
-```
-**Description**: Retrieve paginated list of assets with filtering and search  
-**Authentication**: Required (JWT)  
+### Asset Endpoints
+
+#### GET /api/v1/assets
+Get list of network assets.
+
+**Headers**: `Authorization: Bearer <token>`
 **Query Parameters**:
 - `page` (optional): Page number (default: 1)
-- `limit` (optional): Items per page (default: 20, max: 100)
-- `search` (optional): Search term for hostname, IP, or description
-- `asset_type` (optional): Filter by asset type (server, endpoint, service, appliance)
-- `environment` (optional): Filter by environment (production, staging, development)
-- `protocol` (optional): Filter by protocol (TLS, SSH, etc.)
-- `risk_level` (optional): Filter by risk level (high, medium, low, unknown)
-- `sort_by` (optional): Sort field (risk_score, hostname, first_discovered_at)
-- `sort_order` (optional): Sort direction (asc, desc)
-
-**Example Request**:
-```http
-GET /api/v1/assets?page=1&limit=20&search=web&asset_type=server&environment=production&risk_level=high&sort_by=risk_score&sort_order=desc
-```
+- `limit` (optional): Items per page (default: 20)
+- `search` (optional): Search term
+- `type` (optional): Asset type filter
 
 **Response** (200 OK):
 ```json
 {
-  "data": {
-    "assets": [
-      {
-        "id": "123e4567-e89b-12d3-a456-426614174000",
-        "hostname": "web-server-01",
-        "ip_address": "192.168.1.100",
-        "port": 443,
-        "asset_type": "server",
-        "operating_system": "Ubuntu 20.04",
-        "environment": "production",
-        "business_unit": "Engineering",
-        "owner_email": "admin@acme.com",
-        "description": "Main web server",
-        "tags": {
-          "critical": true,
-          "department": "engineering"
-        },
-        "risk_score": 85,
-        "risk_level": "high",
-        "first_discovered_at": "2025-01-01T00:00:00Z",
-        "last_seen_at": "2025-01-09T10:30:00Z",
-        "created_at": "2025-01-01T00:00:00Z"
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 20,
-      "total": 150,
-      "total_pages": 8,
-      "has_next": true,
-      "has_prev": false
-    }
-  },
-  "message": "Assets retrieved successfully",
-  "error": null
-}
-```
-
-### **Get Asset by ID**
-```http
-GET /api/v1/assets/{id}
-```
-**Description**: Get detailed information about a specific asset  
-**Authentication**: Required (JWT)  
-**Path Parameters**:
-- `id`: Asset UUID
-
-**Response** (200 OK):
-```json
-{
-  "data": {
-    "asset": {
-      "id": "123e4567-e89b-12d3-a456-426614174000",
-      "hostname": "web-server-01",
+  "assets": [
+    {
+      "id": "uuid",
+      "name": "Web Server 01",
+      "type": "server",
       "ip_address": "192.168.1.100",
-      "port": 443,
-      "asset_type": "server",
-      "operating_system": "Ubuntu 20.04",
-      "environment": "production",
-      "business_unit": "Engineering",
-      "owner_email": "admin@acme.com",
-      "description": "Main web server",
-      "tags": {
-        "critical": true,
-        "department": "engineering"
-      },
-      "metadata": {
-        "os_version": "20.04.3 LTS",
-        "kernel": "5.4.0-89-generic"
-      },
-      "risk_score": 85,
-      "risk_level": "high",
-      "first_discovered_at": "2025-01-01T00:00:00Z",
-      "last_seen_at": "2025-01-09T10:30:00Z",
-      "created_at": "2025-01-01T00:00:00Z",
-      "crypto_implementations": [
-        {
-          "id": "123e4567-e89b-12d3-a456-426614174002",
-          "protocol": "TLS",
-          "protocol_version": "1.3",
-          "cipher_suite": "TLS_AES_256_GCM_SHA384",
-          "key_exchange_algorithm": "ECDHE",
-          "key_size": 256,
-          "certificate_issuer": "Let's Encrypt",
-          "certificate_subject": "web-server-01.acme.com",
-          "certificate_valid_from": "2025-01-01T00:00:00Z",
-          "certificate_valid_to": "2025-04-01T00:00:00Z",
-          "risk_score": 85,
-          "risk_level": "high",
-          "created_at": "2025-01-01T00:00:00Z"
-        }
-      ]
+      "status": "active",
+      "last_seen": "2025-01-09T10:00:00Z",
+      "created_at": "2025-01-09T10:00:00Z",
+      "updated_at": "2025-01-09T10:00:00Z"
     }
-  },
-  "message": "Asset retrieved successfully",
-  "error": null
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 100,
+    "pages": 5
+  }
 }
 ```
 
-### **Search Assets**
-```http
-GET /api/v1/assets/search
-```
-**Description**: Advanced search across assets with multiple criteria  
-**Authentication**: Required (JWT)  
-**Query Parameters**: Same as Get Assets, plus:
-- `q` (required): Search query
-- `fields` (optional): Comma-separated fields to search (hostname,ip_address,description)
+#### GET /api/v1/assets/:id
+Get specific asset details.
 
-**Example Request**:
-```http
-GET /api/v1/assets/search?q=web&fields=hostname,description&asset_type=server&environment=production
-```
-
-**Response**: Same format as Get Assets
-
-### **Get Asset Crypto Implementations**
-```http
-GET /api/v1/assets/{id}/crypto
-```
-**Description**: Get all cryptographic implementations for a specific asset  
-**Authentication**: Required (JWT)  
-**Path Parameters**:
-- `id`: Asset UUID
+**Headers**: `Authorization: Bearer <token>`
 
 **Response** (200 OK):
 ```json
 {
-  "data": {
-    "crypto_implementations": [
-      {
-        "id": "123e4567-e89b-12d3-a456-426614174002",
-        "protocol": "TLS",
-        "protocol_version": "1.3",
-        "cipher_suite": "TLS_AES_256_GCM_SHA384",
-        "key_exchange_algorithm": "ECDHE",
-        "key_size": 256,
-        "certificate_issuer": "Let's Encrypt",
-        "certificate_subject": "web-server-01.acme.com",
-        "certificate_valid_from": "2025-01-01T00:00:00Z",
-        "certificate_valid_to": "2025-04-01T00:00:00Z",
-        "risk_score": 85,
-        "risk_level": "high",
-        "created_at": "2025-01-01T00:00:00Z"
-      }
-    ]
-  },
-  "message": "Crypto implementations retrieved successfully",
-  "error": null
+  "asset": {
+    "id": "uuid",
+    "name": "Web Server 01",
+    "type": "server",
+    "ip_address": "192.168.1.100",
+    "status": "active",
+    "last_seen": "2025-01-09T10:00:00Z",
+    "metadata": {
+      "os": "Ubuntu 20.04",
+      "cpu": "Intel Xeon",
+      "memory": "16GB"
+    },
+    "created_at": "2025-01-09T10:00:00Z",
+    "updated_at": "2025-01-09T10:00:00Z"
+  }
 }
 ```
 
-### **Get Risk Summary**
-```http
-GET /api/v1/risk/summary
-```
-**Description**: Get risk analysis summary across all assets  
-**Authentication**: Required (JWT)  
+### Sensor Endpoints
+
+#### GET /api/v1/sensors
+Get list of sensors.
+
+**Headers**: `Authorization: Bearer <token>`
+
 **Response** (200 OK):
 ```json
 {
-  "data": {
-    "risk_summary": {
-      "total_assets": 150,
-      "high_risk_assets": 25,
-      "medium_risk_assets": 80,
-      "low_risk_assets": 40,
-      "unknown_risk_assets": 5,
-      "average_risk_score": 65.5,
-      "risk_distribution": {
-        "high": 16.7,
-        "medium": 53.3,
-        "low": 26.7,
-        "unknown": 3.3
-      },
-      "top_risks": [
-        {
-          "risk_type": "Weak Cipher Suites",
-          "count": 45,
-          "percentage": 30.0
-        },
-        {
-          "risk_type": "Expired Certificates",
-          "count": 12,
-          "percentage": 8.0
-        }
-      ],
-      "compliance_status": {
-        "nist_compliant": 120,
-        "fips_compliant": 95,
-        "pci_compliant": 110
-      }
+  "sensors": [
+    {
+      "id": "uuid",
+      "name": "Sensor 01",
+      "type": "network_monitor",
+      "status": "active",
+      "last_heartbeat": "2025-01-09T10:00:00Z",
+      "created_at": "2025-01-09T10:00:00Z"
     }
-  },
-  "message": "Risk summary retrieved successfully",
-  "error": null
+  ]
 }
 ```
 
 ---
 
-## ❌ Error Responses
+## SaaS Admin Service API
 
-### **Common Error Codes**
+**Base URL**: `http://localhost:8084`
+**Service**: Platform administration and tenant management
 
-| Code | Description | Example |
-|------|-------------|---------|
-| 400 | Bad Request | Invalid request body or parameters |
-| 401 | Unauthorized | Missing or invalid JWT token |
-| 403 | Forbidden | Insufficient permissions |
-| 404 | Not Found | Resource not found |
-| 409 | Conflict | Resource already exists (e.g., email in use) |
-| 422 | Unprocessable Entity | Validation errors |
-| 500 | Internal Server Error | Server-side error |
+### Authentication Endpoints
 
-### **Error Response Format**
+#### POST /api/v1/auth/login
+Authenticate a platform administrator.
+
+**Request Body**:
 ```json
 {
-  "data": null,
-  "message": "Validation failed",
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "details": {
-      "email": ["Email is required"],
-      "password": ["Password must be at least 8 characters"]
-    }
-  },
-  "timestamp": "2025-01-09T10:30:00Z"
+  "email": "admin@crypto-inventory.com",
+  "password": "admin123"
 }
 ```
 
-### **Authentication Errors**
+**Response** (200 OK):
 ```json
 {
-  "data": null,
-  "message": "Authentication failed",
-  "error": {
-    "code": "INVALID_CREDENTIALS",
-    "details": "Invalid email or password"
+  "user": {
+    "id": "uuid",
+    "email": "admin@crypto-inventory.com",
+    "first_name": "Platform",
+    "last_name": "Administrator",
+    "role": "super_admin",
+    "is_active": true,
+    "email_verified": true,
+    "last_login_at": "2025-01-09T10:00:00Z",
+    "created_at": "2025-01-09T10:00:00Z",
+    "updated_at": "2025-01-09T10:00:00Z"
   },
-  "timestamp": "2025-01-09T10:30:00Z"
+  "access_token": "jwt_token",
+  "refresh_token": "jwt_refresh_token",
+  "expires_in": 86400
+}
+```
+
+### Tenant Management Endpoints
+
+#### GET /api/v1/admin/tenants
+Get list of all tenants.
+
+**Headers**: `Authorization: Bearer <token>`
+**Query Parameters**:
+- `page` (optional): Page number (default: 1)
+- `limit` (optional): Items per page (default: 20)
+
+**Response** (200 OK):
+```json
+{
+  "tenants": [
+    {
+      "id": "uuid",
+      "name": "Demo Corporation",
+      "slug": "demo-corp",
+      "domain": "demo.example.com",
+      "subscription_tier": "professional",
+      "trial_ends_at": "2025-02-09T10:00:00Z",
+      "billing_email": "billing@demo.com",
+      "payment_status": "active",
+      "stripe_customer_id": "cus_xxx",
+      "sso_enabled": false,
+      "is_active": true,
+      "created_at": "2025-01-09T10:00:00Z",
+      "updated_at": "2025-01-09T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 50
+  }
+}
+```
+
+#### GET /api/v1/admin/tenants/:id
+Get specific tenant details.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "tenant": {
+    "id": "uuid",
+    "name": "Demo Corporation",
+    "slug": "demo-corp",
+    "domain": "demo.example.com",
+    "subscription_tier": "professional",
+    "trial_ends_at": "2025-02-09T10:00:00Z",
+    "billing_email": "billing@demo.com",
+    "payment_status": "active",
+    "stripe_customer_id": "cus_xxx",
+    "sso_enabled": false,
+    "is_active": true,
+    "created_at": "2025-01-09T10:00:00Z",
+    "updated_at": "2025-01-09T10:00:00Z"
+  }
+}
+```
+
+#### POST /api/v1/admin/tenants
+Create a new tenant.
+
+**Headers**: `Authorization: Bearer <token>`
+**Request Body**:
+```json
+{
+  "name": "New Corporation",
+  "slug": "new-corp",
+  "domain": "new.example.com",
+  "subscription_tier": "professional",
+  "billing_email": "billing@new.com"
+}
+```
+
+**Response** (201 Created):
+```json
+{
+  "message": "Tenant created successfully",
+  "tenant_id": "uuid"
+}
+```
+
+#### PUT /api/v1/admin/tenants/:id
+Update tenant information.
+
+**Headers**: `Authorization: Bearer <token>`
+**Request Body**:
+```json
+{
+  "name": "Updated Corporation",
+  "domain": "updated.example.com",
+  "billing_email": "billing@updated.com",
+  "payment_status": "active"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "message": "Tenant updated successfully"
+}
+```
+
+#### DELETE /api/v1/admin/tenants/:id
+Delete a tenant (soft delete).
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "message": "Tenant deleted successfully"
+}
+```
+
+#### POST /api/v1/admin/tenants/:id/suspend
+Suspend a tenant.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "message": "Tenant suspended successfully"
+}
+```
+
+#### POST /api/v1/admin/tenants/:id/activate
+Activate a tenant.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "message": "Tenant activated successfully"
+}
+```
+
+#### GET /api/v1/admin/tenants/:id/stats
+Get tenant statistics.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "stats": {
+    "tenant_id": "uuid",
+    "tenant_name": "Demo Corporation",
+    "user_count": 25,
+    "asset_count": 150,
+    "sensor_count": 5,
+    "last_activity": "2025-01-09T10:00:00Z",
+    "storage_used": 1024000,
+    "api_requests": 5000
+  }
+}
+```
+
+### Platform User Management Endpoints
+
+#### GET /api/v1/admin/users
+Get list of platform users.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "users": [
+    {
+      "id": "uuid",
+      "email": "admin@crypto-inventory.com",
+      "first_name": "Platform",
+      "last_name": "Administrator",
+      "role": "super_admin",
+      "is_active": true,
+      "email_verified": true,
+      "last_login_at": "2025-01-09T10:00:00Z",
+      "created_at": "2025-01-09T10:00:00Z",
+      "updated_at": "2025-01-09T10:00:00Z"
+    }
+  ]
+}
+```
+
+#### GET /api/v1/admin/users/:id
+Get specific platform user details.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "user": {
+    "id": "uuid",
+    "email": "admin@crypto-inventory.com",
+    "first_name": "Platform",
+    "last_name": "Administrator",
+    "role": "super_admin",
+    "is_active": true,
+    "email_verified": true,
+    "last_login_at": "2025-01-09T10:00:00Z",
+    "created_at": "2025-01-09T10:00:00Z",
+    "updated_at": "2025-01-09T10:00:00Z"
+  }
+}
+```
+
+#### POST /api/v1/admin/users
+Create a new platform user.
+
+**Headers**: `Authorization: Bearer <token>`
+**Request Body**:
+```json
+{
+  "email": "newadmin@crypto-inventory.com",
+  "password": "SecurePassword123!",
+  "first_name": "New",
+  "last_name": "Admin",
+  "role": "platform_admin"
+}
+```
+
+**Response** (201 Created):
+```json
+{
+  "message": "Platform user created successfully",
+  "user_id": "uuid"
+}
+```
+
+### Platform Statistics Endpoints
+
+#### GET /api/v1/admin/stats/platform
+Get platform-wide statistics.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "stats": {
+    "total_tenants": 50,
+    "active_tenants": 45,
+    "total_users": 1250,
+    "total_assets": 5000,
+    "total_sensors": 200,
+    "total_api_requests": 100000,
+    "storage_used": 50000000,
+    "revenue": 250000
+  }
+}
+```
+
+#### GET /api/v1/admin/stats/tenants
+Get statistics for all tenants.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "tenants_stats": [
+    {
+      "tenant_id": "uuid",
+      "tenant_name": "Demo Corporation",
+      "user_count": 25,
+      "asset_count": 150,
+      "sensor_count": 5,
+      "last_activity": "2025-01-09T10:00:00Z",
+      "storage_used": 1024000,
+      "api_requests": 5000
+    }
+  ]
+}
+```
+
+### System Monitoring Endpoints
+
+#### GET /api/v1/admin/monitoring/health
+Get system health status.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "database": "healthy",
+  "timestamp": "2025-01-09T10:00:00Z"
+}
+```
+
+#### GET /api/v1/admin/monitoring/logs
+Get system logs.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "logs": [],
+  "message": "System logs endpoint - to be implemented"
 }
 ```
 
 ---
 
-## 🔒 Security Considerations
+## Common Response Formats
 
-### **JWT Token Security**
-- Access tokens expire in 15 minutes
-- Refresh tokens expire in 7 days
-- Tokens are stored securely in Redis
-- All tokens are invalidated on logout
-
-### **Password Security**
-- Passwords are hashed using Argon2id
-- Minimum 8 characters with complexity requirements
-- Password strength validation on registration
-
-### **Multi-Tenant Isolation**
-- All data is isolated by tenant ID
-- Users can only access their tenant's data
-- JWT tokens include tenant context
-
-### **Rate Limiting**
-- 100 requests per minute per IP
-- 10 login attempts per minute per IP
-- Exponential backoff on failed attempts
-
----
-
-## 📝 Data Models
-
-### **Asset Model**
-```typescript
-interface Asset {
-  id: string;                    // UUID
-  tenant_id: string;             // UUID
-  hostname?: string;             // Optional hostname
-  ip_address?: string;           // Optional IP address
-  port?: number;                 // Optional port number
-  asset_type: string;            // server, endpoint, service, appliance
-  operating_system?: string;     // Optional OS information
-  environment?: string;          // production, staging, development
-  business_unit?: string;        // Optional business unit
-  owner_email?: string;          // Optional owner email
-  description?: string;          // Optional description
-  tags: Record<string, any>;     // Key-value tags
-  metadata: Record<string, any>; // Additional metadata
-  first_discovered_at: string;   // ISO 8601 timestamp
-  last_seen_at: string;          // ISO 8601 timestamp
-  created_at: string;            // ISO 8601 timestamp
-  updated_at: string;            // ISO 8601 timestamp
-  deleted_at?: string;           // ISO 8601 timestamp (soft delete)
-  
-  // Calculated fields
-  risk_score: number;            // 0-100 risk score
-  risk_level: string;            // high, medium, low, unknown
-  crypto_implementations?: CryptoImplementation[];
+### Success Response
+```json
+{
+  "data": { ... },
+  "message": "Operation successful",
+  "timestamp": "2025-01-09T10:00:00Z"
 }
 ```
 
-### **CryptoImplementation Model**
-```typescript
-interface CryptoImplementation {
-  id: string;                    // UUID
-  tenant_id: string;             // UUID
-  asset_id: string;              // UUID
-  protocol: string;              // TLS, SSH, etc.
-  protocol_version?: string;     // 1.3, 2.0, etc.
-  cipher_suite?: string;         // TLS_AES_256_GCM_SHA384
-  key_exchange_algorithm?: string; // ECDHE, RSA, etc.
-  key_size?: number;             // 256, 2048, etc.
-  certificate_issuer?: string;   // Certificate authority
-  certificate_subject?: string;  // Certificate subject
-  certificate_valid_from?: string; // ISO 8601 timestamp
-  certificate_valid_to?: string;   // ISO 8601 timestamp
-  risk_score: number;            // 0-100 risk score
-  risk_level: string;            // high, medium, low, unknown
-  created_at: string;            // ISO 8601 timestamp
-  updated_at: string;            // ISO 8601 timestamp
+### Error Response
+```json
+{
+  "error": "Error message",
+  "code": "ERROR_CODE",
+  "details": { ... },
+  "timestamp": "2025-01-09T10:00:00Z"
+}
+```
+
+### Pagination Response
+```json
+{
+  "data": [ ... ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 100,
+    "pages": 5
+  }
 }
 ```
 
 ---
 
-## 🚀 Getting Started
+## Error Handling
 
-### **1. Authentication Flow**
-```bash
-# 1. Register a new user
-curl -X POST http://localhost:8081/api/v1/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@example.com",
-    "password": "SecurePassword123!",
-    "first_name": "Admin",
-    "last_name": "User",
-    "tenant_name": "My Company"
-  }'
+### HTTP Status Codes
 
-# 2. Login to get tokens
-curl -X POST http://localhost:8081/api/v1/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@example.com",
-    "password": "SecurePassword123!"
-  }'
+- `200 OK` - Request successful
+- `201 Created` - Resource created successfully
+- `400 Bad Request` - Invalid request data
+- `401 Unauthorized` - Authentication required
+- `403 Forbidden` - Insufficient permissions
+- `404 Not Found` - Resource not found
+- `409 Conflict` - Resource conflict (e.g., duplicate email)
+- `422 Unprocessable Entity` - Validation error
+- `500 Internal Server Error` - Server error
 
-# 3. Use access token for authenticated requests
-curl -X GET http://localhost:8082/api/v1/assets \
-  -H "Authorization: Bearer <access_token>"
-```
+### Error Response Format
 
-### **2. Asset Management**
-```bash
-# Get all assets with filtering
-curl -X GET "http://localhost:8082/api/v1/assets?page=1&limit=20&environment=production&risk_level=high" \
-  -H "Authorization: Bearer <access_token>"
-
-# Get specific asset details
-curl -X GET http://localhost:8082/api/v1/assets/{asset_id} \
-  -H "Authorization: Bearer <access_token>"
-
-# Search assets
-curl -X GET "http://localhost:8082/api/v1/assets/search?q=web&asset_type=server" \
-  -H "Authorization: Bearer <access_token>"
+```json
+{
+  "error": "Validation failed",
+  "code": "VALIDATION_ERROR",
+  "details": {
+    "field": "email",
+    "message": "Invalid email format"
+  },
+  "timestamp": "2025-01-09T10:00:00Z"
+}
 ```
 
 ---
 
-## 📞 Support
+## Authentication & Authorization
 
-For API support and questions:
-- **Documentation**: This file and inline code comments
-- **Health Checks**: Use `/health` endpoints to verify service status
-- **Error Handling**: All errors include detailed messages and codes
+### JWT Token Format
+
+```json
+{
+  "user_id": "uuid",
+  "email": "user@example.com",
+  "tenant_id": "uuid",  // For tenant users
+  "role": "tenant_owner", // or platform role
+  "type": "access",
+  "exp": 1641234567,
+  "iat": 1641148167
+}
+```
+
+### Authorization Headers
+
+```
+Authorization: Bearer <jwt_token>
+```
+
+### Role-Based Access Control
+
+**Tenant Roles**:
+- `tenant_owner` - Full tenant access
+- `tenant_admin` - Tenant management
+- `security_admin` - Security settings
+- `analyst` - Data analysis
+
+**Platform Roles**:
+- `super_admin` - Full platform access
+- `platform_admin` - Platform management
+- `support_admin` - Support and monitoring
 
 ---
 
-*This API documentation is automatically generated and maintained. Last updated: 2025-01-09*
+*This API documentation should be updated as new endpoints are added or existing ones are modified. Last updated: 2025-01-09*

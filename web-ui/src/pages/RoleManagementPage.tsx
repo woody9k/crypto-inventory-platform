@@ -1,16 +1,19 @@
 /**
- * Role Management Page
+ * Tenant Role Management Page
  * 
- * Main page for RBAC (Role-Based Access Control) management in the SaaS platform.
+ * Main page for tenant-level RBAC (Role-Based Access Control) management.
  * This page provides a comprehensive interface for managing users, roles, and permissions
- * across the multi-tenant system.
+ * within the current tenant organization.
  * 
  * Features:
  * - Tab-based navigation for different management aspects
- * - Role management with permission matrix
- * - User management with role assignments
+ * - Tenant role management with permission matrix
+ * - Tenant user management with role assignments
  * - Permission overview by category
  * - Audit log viewing and tracking
+ * 
+ * Note: This is for tenant-level management only. Platform admin functions
+ * are available in the separate SaaS Admin Console.
  * 
  * Architecture:
  * - PermissionProvider wrapper for RBAC context
@@ -272,6 +275,19 @@ const RoleManagementPage: React.FC = () => {
     <PermissionProvider>
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+          {/* Page Header */}
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+              Tenant Role Management
+            </h1>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              Manage users, roles, and permissions for your organization. 
+              <span className="text-blue-600 dark:text-blue-400">
+                Platform admin functions are available in the separate SaaS Admin Console.
+              </span>
+            </p>
+          </div>
+
           {/* Tab Navigation */}
           <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
             <nav className="-mb-px flex space-x-8">
