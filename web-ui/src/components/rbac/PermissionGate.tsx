@@ -122,7 +122,7 @@ export const PermissionGate: React.FC<PermissionGateProps> = ({
   let hasAccess = false;
 
   if (permission) {
-    hasAccess = hasPermission(permission);
+    hasAccess = hasAnyPermission([permission]);
   } else if (permissions.length > 0) {
     hasAccess = requireAll ? hasAllPermissions(permissions) : hasAnyPermission(permissions);
   } else {
@@ -140,7 +140,7 @@ export const withPermission = <P extends object>(
   fallback?: React.ComponentType<P>
 ) => {
   return (props: P) => (
-    <PermissionGate permission={permission} fallback={fallback ? <fallback {...props} /> : null}>
+    <PermissionGate permission={permission} fallback={fallback ? React.createElement(fallback, props) : null}>
       <Component {...props} />
     </PermissionGate>
   );
@@ -148,16 +148,16 @@ export const withPermission = <P extends object>(
 
 // Hook for conditional rendering based on permissions
 export const usePermissionCheck = (permission: string) => {
-  const { hasPermission, loading } = usePermissions();
+  const { hasAnyPermission, loading } = usePermissions();
   return {
-    hasPermission: hasPermission(permission),
+    hasPermission: hasAnyPermission([permission]),
     loading
   };
 };
 
 // Hook for multiple permission checks
 export const usePermissionChecks = (permissions: string[], requireAll = false) => {
-  const { hasPermission, hasAnyPermission, hasAllPermissions, loading } = usePermissions();
+  const { hasAnyPermission, hasAllPermissions, loading } = usePermissions();
   
   return {
     hasPermission: requireAll ? hasAllPermissions(permissions) : hasAnyPermission(permissions),

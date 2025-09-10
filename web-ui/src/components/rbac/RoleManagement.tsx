@@ -132,21 +132,48 @@ const RoleManagement: React.FC = () => {
         email: 'admin@democorp.com',
         first_name: 'Admin',
         last_name: 'User',
-        roles: [roles.find(r => r.name === 'tenant_admin')!]
+        roles: [
+          {
+            id: '1',
+            name: 'tenant_admin',
+            display_name: 'Tenant Administrator',
+            description: 'Full tenant management capabilities',
+            is_system_role: true,
+            permissions: []
+          }
+        ]
       },
       {
         id: '2',
         email: 'analyst@democorp.com',
         first_name: 'Security',
         last_name: 'Analyst',
-        roles: [roles.find(r => r.name === 'analyst')!]
+        roles: [
+          {
+            id: '3',
+            name: 'analyst',
+            display_name: 'Security Analyst',
+            description: 'Data analysis and reporting',
+            is_system_role: true,
+            permissions: []
+          }
+        ]
       },
       {
         id: '3',
         email: 'viewer@democorp.com',
         first_name: 'Read',
         last_name: 'Only',
-        roles: [roles.find(r => r.name === 'viewer')!]
+        roles: [
+          {
+            id: '4',
+            name: 'viewer',
+            display_name: 'Viewer',
+            description: 'Read-only access',
+            is_system_role: true,
+            permissions: []
+          }
+        ]
       }
     ];
     setUsers(mockUsers);
