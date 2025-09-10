@@ -8,20 +8,7 @@ import {
   TrashIcon,
   CogIcon,
 } from '@heroicons/react/24/outline';
-
-interface PendingSensor {
-  id: string;
-  name: string;
-  ipAddress: string;
-  tags: string[];
-  profile: string;
-  networkInterfaces: string[];
-  registrationKey: string;
-  createdAt: string;
-  expiresAt: string;
-  status: 'pending' | 'expired' | 'used';
-  installationCommand: string;
-}
+import { sensorsApi, PendingSensorItem } from '../services/sensorsApi';
 
 interface AdminSettings {
   keyExpirationMinutes: number;
@@ -30,7 +17,7 @@ interface AdminSettings {
 }
 
 const SensorRegistrationPage: React.FC = () => {
-  const [pendingSensors, setPendingSensors] = useState<PendingSensor[]>([]);
+  const [pendingSensors, setPendingSensors] = useState<PendingSensorItem[]>([]);
   const [adminSettings, setAdminSettings] = useState<AdminSettings>({
     keyExpirationMinutes: 60,
     maxPendingSensors: 50,
@@ -39,6 +26,7 @@ const SensorRegistrationPage: React.FC = () => {
   const [showAddSensor, setShowAddSensor] = useState(false);
   const [showAdminSettings, setShowAdminSettings] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Form state for new sensor
   const [formData, setFormData] = useState({
@@ -50,7 +38,6 @@ const SensorRegistrationPage: React.FC = () => {
     description: ''
   });
 
-  // Available tags and profiles
   const availableTags = [
     'datacenter', 'office', 'cloud', 'critical', 'test', 'production',
     'staging', 'development', 'dmz', 'internal', 'external'
@@ -63,63 +50,28 @@ const SensorRegistrationPage: React.FC = () => {
     { value: 'air_gapped', label: 'Air Gapped', description: 'Offline mode, export files' }
   ];
 
-  // Mock data for demonstration
-  useEffect(() => {
-    const mockPendingSensors: PendingSensor[] = [
-      {
-        id: 'pending-001',
-        name: 'sensor-dc01',
-        ipAddress: '192.168.1.100',
-        tags: ['datacenter', 'critical'],
-        profile: 'datacenter_host',
-        networkInterfaces: ['eth0', 'eth1'],
-        registrationKey: 'REG-tenant-123-20241215-A7B3C9',
-        createdAt: '2024-12-15T10:00:00Z',
-        expiresAt: '2024-12-15T11:00:00Z',
-        status: 'pending',
-        installationCommand: 'curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key REG-tenant-123-20241215-A7B3C9 --ip 192.168.1.100 --name "Datacenter Sensor 1" --profile datacenter_host'
-      },
-      {
-        id: 'pending-002',
-        name: 'sensor-cloud01',
-        ipAddress: '10.0.1.50',
-        tags: ['cloud', 'production'],
-        profile: 'cloud_instance',
-        networkInterfaces: ['ens3'],
-        registrationKey: 'REG-tenant-123-20241215-B8C4D0',
-        createdAt: '2024-12-15T09:30:00Z',
-        expiresAt: '2024-12-15T10:30:00Z',
-        status: 'pending',
-        installationCommand: 'curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key REG-tenant-123-20241215-B8C4D0 --ip 10.0.1.50 --name "Cloud Sensor 1" --profile cloud_vm'
-      },
-      {
-        id: 'pending-003',
-        name: 'sensor-user01',
-        ipAddress: '192.168.0.25',
-        tags: ['office', 'test'],
-        profile: 'end_user_machine',
-        networkInterfaces: ['wlan0'],
-        registrationKey: 'REG-tenant-123-20241215-C9D5E1',
-        createdAt: '2024-12-15T08:00:00Z',
-        expiresAt: '2024-12-15T09:00:00Z',
-        status: 'expired',
-        installationCommand: 'curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key REG-tenant-123-20241215-C9D5E1 --ip 192.168.0.25 --name "Edge Sensor 1" --profile edge_device'
-      }
-    ];
-
-    setTimeout(() => {
-      setPendingSensors(mockPendingSensors);
+  const fetchPending = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const items = await sensorsApi.listPending();
+      setPendingSensors(items);
+    } catch (e) {
+      setError('Failed to load pending sensors');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    fetchPending();
   }, []);
 
   const formatTimeRemaining = (expiresAt: string) => {
     const now = new Date().getTime();
     const expiry = new Date(expiresAt).getTime();
     const diff = expiry - now;
-
     if (diff <= 0) return 'Expired';
-
     const minutes = Math.floor(diff / 60000);
     const seconds = Math.floor((diff % 60000) / 1000);
     return `${minutes}m ${seconds}s`;
@@ -151,90 +103,57 @@ const SensorRegistrationPage: React.FC = () => {
     }
   };
 
-  /**
-   * Generates installation commands for a pending sensor
-   * Creates three different installation methods:
-   * 1. One-line curl command (recommended)
-   * 2. Interactive mode for guided installation
-   * 3. Manual download and installation
-   * 
-   * @param sensor - The pending sensor configuration
-   * @returns Object containing all three installation command variants
-   */
-  const generateInstallationCommands = (sensor: PendingSensor) => {
-    const interfaces = sensor.networkInterfaces.length > 0 ? sensor.networkInterfaces.join(',') : 'eth0';
+  const generateInstallationCommands = (sensor: PendingSensorItem) => {
+    const interfaces = sensor.network_interfaces.length > 0 ? sensor.network_interfaces.join(',') : 'eth0';
     const controlPlaneURL = 'https://crypto-inventory.company.com';
-    
     return {
-      // Direct download and run - one-line installation
-      curlCommand: `curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key ${sensor.registrationKey} --ip ${sensor.ipAddress} --name "${sensor.name}" --profile ${sensor.profile}`,
-      
-      // Interactive mode - guided installation with prompts
+      curlCommand: `curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key ${sensor.registration_key} --ip ${sensor.ip_address} --name "${sensor.name}" --profile ${sensor.profile}`,
       interactiveCommand: `curl -sSL ${controlPlaneURL}/scripts/install-sensor.sh | sudo bash -s -- --interactive`,
-      
-      // Manual download - for air-gapped or restricted environments
       manualCommand: `# Download and run manually
 curl -O ${controlPlaneURL}/scripts/install-sensor.sh
 chmod +x install-sensor.sh
-sudo ./install-sensor.sh \\
-  --key ${sensor.registrationKey} \\
-  --ip ${sensor.ipAddress} \\
-  --name ${sensor.name} \\
-  --profile ${sensor.profile} \\
-  --interfaces "${interfaces}" \\
-  --url ${controlPlaneURL}`
+sudo ./install-sensor.sh \
+  --key ${sensor.registration_key} \
+  --ip ${sensor.ip_address} \
+  --name ${sensor.name} \
+  --profile ${sensor.profile} \
+  --interfaces "${interfaces}" \
+  --url ${controlPlaneURL}`,
     };
   };
 
-  const handleAddSensor = () => {
-    // Validate form
+  const handleAddSensor = async () => {
     if (!formData.name || !formData.ipAddress) {
       alert('Please fill in required fields');
       return;
     }
-
-    // Generate registration key
-    const keySuffix = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const now = new Date();
-    const key = `REG-tenant-123-${now.toISOString().slice(0, 10).replace(/-/g, '')}-${keySuffix}`;
-    
-    // Calculate expiration
-    const expiresAt = new Date(now.getTime() + adminSettings.keyExpirationMinutes * 60000);
-
-    // Create pending sensor
-    const newSensor: PendingSensor = {
-      id: `pending-${Date.now()}`,
-      name: formData.name,
-      ipAddress: formData.ipAddress,
-      tags: formData.tags,
-      profile: formData.profile,
-      networkInterfaces: formData.networkInterfaces,
-      registrationKey: key,
-      createdAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      status: 'pending',
-      installationCommand: `curl -sSL https://sensors.crypto-inventory.com/install.sh | bash -s -- --key ${key} --ip ${formData.ipAddress} --name "${formData.name}" --profile ${formData.profile}`
-    };
-
-    setPendingSensors([...pendingSensors, newSensor]);
-    setShowAddSensor(false);
-    setFormData({
-      name: '',
-      ipAddress: '',
-      tags: [],
-      profile: 'datacenter_host',
-      networkInterfaces: [],
-      description: ''
-    });
+    try {
+      await sensorsApi.createPending({
+        name: formData.name,
+        ip_address: formData.ipAddress,
+        profile: formData.profile,
+        network_interfaces: formData.networkInterfaces,
+        tags: formData.tags,
+      });
+      setShowAddSensor(false);
+      setFormData({ name: '', ipAddress: '', tags: [], profile: 'datacenter_host', networkInterfaces: [], description: '' });
+      fetchPending();
+    } catch (e) {
+      setError('Failed to create registration key');
+    }
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    // You could add a toast notification here
   };
 
-  const deletePendingSensor = (id: string) => {
-    setPendingSensors(pendingSensors.filter(s => s.id !== id));
+  const deletePendingSensor = async (idOrKey: string) => {
+    try {
+      await sensorsApi.deletePending(idOrKey);
+      fetchPending();
+    } catch (e) {
+      setError('Failed to delete registration key');
+    }
   };
 
   if (loading) {
@@ -275,88 +194,7 @@ sudo ./install-sensor.sh \\
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ClockIcon className="h-6 w-6 text-yellow-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                    Pending Sensors
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    {pendingSensors.filter(s => s.status === 'pending').length}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CheckCircleIcon className="h-6 w-6 text-green-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                    Registered Today
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    {pendingSensors.filter(s => s.status === 'used').length}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ExclamationTriangleIcon className="h-6 w-6 text-red-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                    Expired Keys
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    {pendingSensors.filter(s => s.status === 'expired').length}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ClockIcon className="h-6 w-6 text-blue-500" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                    Key Expiration
-                  </dt>
-                  <dd className="text-lg font-medium text-gray-900 dark:text-white">
-                    {adminSettings.keyExpirationMinutes}m
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* Pending Sensors Table */}
       <div className="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-md">
@@ -385,35 +223,35 @@ sudo ./install-sensor.sh \\
                         </span>
                         {sensor.status === 'pending' && (
                           <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
-                            Expires in: {formatTimeRemaining(sensor.expiresAt)}
+                            Expires in: {formatTimeRemaining(sensor.expires_at)}
                           </span>
                         )}
                       </div>
                       <div className="mt-1 flex items-center text-sm text-gray-500 dark:text-gray-400">
-                        <p className="mr-4">IP: {sensor.ipAddress}</p>
+                        <p className="mr-4">IP: {sensor.ip_address}</p>
                         <p className="mr-4">Profile: {sensor.profile}</p>
-                        <p className="mr-4">Tags: {sensor.tags.join(', ')}</p>
-                        <p>Key: {sensor.registrationKey}</p>
+                        <p className="mr-4">Interfaces: {sensor.network_interfaces.join(', ')}</p>
+                        <p>Key: {sensor.registration_key}</p>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
                     <button
-                      onClick={() => copyToClipboard(sensor.registrationKey)}
+                      onClick={() => copyToClipboard(sensor.registration_key)}
                       className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                     >
                       <ClipboardDocumentIcon className="h-4 w-4 mr-1" />
                       Copy Key
                     </button>
                     <button
-                      onClick={() => copyToClipboard(sensor.installationCommand)}
+                      onClick={() => copyToClipboard(generateInstallationCommands(sensor).curlCommand)}
                       className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                     >
                       <ClipboardDocumentIcon className="h-4 w-4 mr-1" />
                       Copy Command
                     </button>
                     <button
-                      onClick={() => deletePendingSensor(sensor.id)}
+                      onClick={() => deletePendingSensor(sensor.registration_key)}
                       className="inline-flex items-center px-3 py-1 border border-red-300 dark:border-red-600 text-sm font-medium rounded-md text-red-700 dark:text-red-300 bg-white dark:bg-gray-700 hover:bg-red-50 dark:hover:bg-red-600"
                     >
                       <TrashIcon className="h-4 w-4 mr-1" />
@@ -421,18 +259,16 @@ sudo ./install-sensor.sh \\
                     </button>
                   </div>
                 </div>
-                
+
                 {/* Installation Commands */}
                 <div className="mt-4">
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
                     Installation Commands
                   </p>
-                  
                   {(() => {
                     const commands = generateInstallationCommands(sensor);
                     return (
                       <div className="space-y-3">
-                        {/* One-line curl command */}
                         <div>
                           <p className="text-xs font-medium text-blue-700 dark:text-blue-300 mb-1">
                             🚀 One-Line Installation (Recommended)
@@ -452,7 +288,6 @@ sudo ./install-sensor.sh \\
                           </div>
                         </div>
 
-                        {/* Interactive mode */}
                         <div>
                           <p className="text-xs font-medium text-green-700 dark:text-green-300 mb-1">
                             🎛️ Interactive Mode
@@ -472,7 +307,6 @@ sudo ./install-sensor.sh \\
                           </div>
                         </div>
 
-                        {/* Manual download */}
                         <details className="group">
                           <summary className="text-xs font-medium text-gray-700 dark:text-gray-300 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100">
                             📥 Manual Download & Install
@@ -522,7 +356,6 @@ sudo ./install-sensor.sh \\
                     placeholder="sensor-dc01"
                   />
                 </div>
-                
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     IP Address *
@@ -534,11 +367,7 @@ sudo ./install-sensor.sh \\
                     className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                     placeholder="192.168.1.100"
                   />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    The sensor host must have this IP address assigned to one of its interfaces
-                  </p>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Tags
@@ -563,7 +392,6 @@ sudo ./install-sensor.sh \\
                     ))}
                   </div>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Profile
@@ -580,7 +408,18 @@ sudo ./install-sensor.sh \\
                     ))}
                   </select>
                 </div>
-
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Network Interfaces (comma separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.networkInterfaces.join(',')}
+                    onChange={(e) => setFormData({...formData, networkInterfaces: e.target.value.split(',').map(s => s.trim()).filter(Boolean)})}
+                    className="mt-1 block w-full border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    placeholder="eth0,eth1"
+                  />
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Description
@@ -634,11 +473,7 @@ sudo ./install-sensor.sh \\
                     min="5"
                     max="1440"
                   />
-                  <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    How long registration keys remain valid (5-1440 minutes)
-                  </p>
                 </div>
-
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Max Pending Sensors
@@ -652,7 +487,6 @@ sudo ./install-sensor.sh \\
                     max="1000"
                   />
                 </div>
-
                 <div className="flex items-center">
                   <input
                     type="checkbox"

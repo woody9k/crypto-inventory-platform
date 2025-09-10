@@ -302,3 +302,50 @@ For support and questions:
 ---
 
 *Last updated: 2025-01-09*
+
+# Crypto Inventory - Web UI Updates (Dashboard, Roles, Reports, Sensors)
+
+This update adds tenant dashboard data wiring, RBAC integration, report management, and sensor registration flows.
+
+## What’s new
+- Dashboard
+  - Overview stats backed by inventory APIs via `dashboardApi`
+  - Recent Activity from auth-service `/audit/logs` with time range (24h/7d/30d)
+  - Expiring Certificates panel from inventory-service
+  - Top Risks panel from risk summary
+  - Quick actions navigate to Assets, Reports, Roles
+- Roles & Permissions
+  - `RoleManagement` loads tenant roles and permissions via RBAC endpoints
+  - Permission toggles persist to backend
+- Reports
+  - `ReportsPage` lists reports, generates new ones, polls status, supports delete
+- Sensors
+  - `SensorRegistrationPage` lists/creates/deletes pending registration keys using sensor-manager
+
+## Local services (defaults)
+- auth-service: `http://localhost:8081` (configured in `web-ui/src/services/api.ts`)
+- inventory-service: `http://localhost:8082`
+- report-generator: `http://localhost:8083`
+- sensor-manager: `http://localhost:8080`
+
+Ensure these are running or adjust base URLs inside the respective `*Api` files as needed.
+
+## Testing
+- Added Vitest + Testing Library setup
+- Tests:
+  - `src/pages/__tests__/DashboardPage.test.tsx`
+  - `src/pages/__tests__/ReportsPage.test.tsx`
+  - `src/pages/__tests__/SensorRegistrationPage.test.tsx`
+  - `src/components/rbac/__tests__/RoleManagement.test.tsx`
+
+Run tests:
+
+```
+pnpm test
+```
+
+or
+
+```
+npm run test
+```

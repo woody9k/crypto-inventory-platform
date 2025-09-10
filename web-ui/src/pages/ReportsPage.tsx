@@ -12,157 +12,47 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
-
-/**
- * Report interface representing a generated report with metadata and status.
- * This matches the structure returned by the report generator API.
- */
-interface Report {
-  id: string;                    // Unique report identifier
-  title: string;                 // Human-readable report title
-  type: string;                  // Report type (crypto_summary, compliance_status, etc.)
-  status: 'generating' | 'completed' | 'failed'; // Current report status
-  created_at: string;            // ISO timestamp of report creation
-  completed_at?: string;         // ISO timestamp of report completion (optional)
-  download_url?: string;         // URL for downloading the report (optional)
-}
-
-/**
- * ReportTemplate interface representing a predefined report template.
- * Templates define the structure and parameters for different report types.
- */
-interface ReportTemplate {
-  id: string;          // Unique template identifier
-  name: string;        // Human-readable template name
-  description: string; // Template description
-  type: string;        // Template type (summary, compliance, etc.)
-  category: string;    // Template category (crypto, compliance, network, security)
-}
+import { reportsApi, ReportItem, ReportTemplateItem } from '../services/reportsApi';
 
 interface ReportsPageProps {}
 
-/**
- * ReportsPage component provides a comprehensive interface for managing reports.
- * Features include:
- * - Viewing all generated reports with status tracking
- * - Generating new reports from templates
- * - Downloading completed reports
- * - Deleting reports
- * - Real-time status updates
- */
 const ReportsPage: React.FC<ReportsPageProps> = () => {
-  const [reports, setReports] = useState<Report[]>([]);
-  const [templates, setTemplates] = useState<ReportTemplate[]>([]);
+  const [reports, setReports] = useState<ReportItem[]>([]);
+  const [templates, setTemplates] = useState<ReportTemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
-  const [, setSelectedTemplate] = useState<ReportTemplate | null>(null);
+  const [, setSelectedTemplate] = useState<ReportTemplateItem | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load mock data for demonstration purposes
-  // In production, this would make API calls to fetch real data
-  useEffect(() => {
-    const mockReports: Report[] = [
-      {
-        id: 'report-001',
-        title: 'Crypto Summary Report',
-        type: 'crypto_summary',
-        status: 'completed',
-        created_at: '2024-12-15T09:00:00Z',
-        completed_at: '2024-12-15T09:02:30Z',
-        download_url: '/api/v1/reports/report-001/download'
-      },
-      {
-        id: 'report-002',
-        title: 'Compliance Status Report',
-        type: 'compliance_status',
-        status: 'completed',
-        created_at: '2024-12-15T08:30:00Z',
-        completed_at: '2024-12-15T08:32:15Z',
-        download_url: '/api/v1/reports/report-002/download'
-      },
-      {
-        id: 'report-003',
-        title: 'Network Topology Report',
-        type: 'network_topology',
-        status: 'generating',
-        created_at: '2024-12-15T10:15:00Z'
-      },
-      {
-        id: 'report-004',
-        title: 'Risk Assessment Report',
-        type: 'risk_assessment',
-        status: 'failed',
-        created_at: '2024-12-15T07:45:00Z'
-      }
-    ];
-
-    const mockTemplates: ReportTemplate[] = [
-      {
-        id: 'crypto_summary',
-        name: 'Crypto Summary Report',
-        description: 'Overview of all cryptographic implementations across the network',
-        type: 'summary',
-        category: 'crypto'
-      },
-      {
-        id: 'compliance_status',
-        name: 'Compliance Status Report',
-        description: 'Current compliance status against various frameworks',
-        type: 'compliance',
-        category: 'compliance'
-      },
-      {
-        id: 'network_topology',
-        name: 'Network Topology Report',
-        description: 'Network topology and sensor coverage map',
-        type: 'topology',
-        category: 'network'
-      },
-      {
-        id: 'risk_assessment',
-        name: 'Risk Assessment Report',
-        description: 'Security risk assessment and recommendations',
-        type: 'risk',
-        category: 'security'
-      },
-      {
-        id: 'certificate_audit',
-        name: 'Certificate Audit Report',
-        description: 'SSL/TLS certificate inventory and expiration analysis',
-        type: 'audit',
-        category: 'crypto'
-      }
-    ];
-
-    setTimeout(() => {
-      setReports(mockReports);
-      setTemplates(mockTemplates);
+  const fetchAll = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const [rpts, tmpls] = await Promise.all([reportsApi.list(), reportsApi.templates().catch(() => [])]);
+      setReports(rpts);
+      setTemplates(tmpls);
+    } catch (e) {
+      setError('Failed to load reports');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
+  };
+
+  useEffect(() => {
+    fetchAll();
   }, []);
 
-  /**
-   * Returns the appropriate icon component for a given report status.
-   * @param status - The report status (generating, completed, failed)
-   * @returns JSX element representing the status icon
-   */
-  // const _getStatusIcon = (status: string) => {
-  //   switch (status) {
-  //     case 'completed':
-  //       return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
-  //     case 'generating':
-  //       return <ClockIcon className="h-5 w-5 text-yellow-500" />;
-  //     case 'failed':
-  //       return <XCircleIcon className="h-5 w-5 text-red-500" />;
-  //     default:
-  //       return <ClockIcon className="h-5 w-5 text-gray-500" />;
-  //   }
-  // };
+  // Poll generating reports
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      if (reports.some(r => r.status === 'generating')) {
+        const rpts = await reportsApi.list();
+        setReports(rpts);
+      }
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [reports]);
 
-  /**
-   * Returns the appropriate CSS classes for a given report status.
-   * @param status - The report status (generating, completed, failed)
-   * @returns String of CSS classes for styling the status badge
-   */
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'completed':
@@ -176,11 +66,6 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
     }
   };
 
-  /**
-   * Returns the appropriate icon component for a given report type.
-   * @param type - The report type (crypto_summary, compliance_status, etc.)
-   * @returns JSX element representing the report type icon
-   */
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'crypto_summary':
@@ -196,41 +81,28 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
     }
   };
 
-  /**
-   * Formats a date string into a human-readable format.
-   * @param dateString - ISO date string
-   * @returns Formatted date string
-   */
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
+  const formatDate = (dateString: string) => new Date(dateString).toLocaleString();
 
-  /**
-   * Handles the generation of a new report from a template.
-   * @param template - The selected report template
-   */
-  const handleGenerateReport = (template: ReportTemplate) => {
+  const handleGenerateReport = async (template: ReportTemplateItem) => {
     setSelectedTemplate(template);
-    setShowGenerateModal(true);
-  };
-
-  /**
-   * Handles the download of a completed report.
-   * @param report - The report to download
-   */
-  const handleDownloadReport = (report: Report) => {
-    if (report.download_url) {
-      // In a real implementation, this would trigger the download
-      console.log('Downloading report:', report.download_url);
+    try {
+      await reportsApi.generate({ type: template.id, title: template.name });
+      setShowGenerateModal(false);
+      fetchAll();
+    } catch (e) {
+      setError('Failed to generate report');
     }
   };
 
-  /**
-   * Handles the deletion of a report from the system.
-   * @param reportId - The ID of the report to delete
-   */
-  const handleDeleteReport = (reportId: string) => {
-    setReports(reports.filter(r => r.id !== reportId));
+  const handleDownloadReport = (report: ReportItem) => {
+    if (report.download_url) {
+      window.open(report.download_url, '_blank');
+    }
+  };
+
+  const handleDeleteReport = async (reportId: string) => {
+    await reportsApi.delete(reportId);
+    fetchAll();
   };
 
   if (loading) {
@@ -261,6 +133,8 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
           Generate Report
         </button>
       </div>
+
+      {error && <p className="text-sm text-red-600">{error}</p>}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -380,7 +254,7 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {report.status === 'completed' && (
+                    {report.status === 'completed' && report.download_url && (
                       <button
                         onClick={() => handleDownloadReport(report)}
                         className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"

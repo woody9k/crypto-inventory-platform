@@ -31,6 +31,8 @@ import {
   CheckCircleIcon,
   XCircleIcon
 } from '@heroicons/react/24/outline';
+import { rbacApi } from '../../services/rbacApi';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface Role {
   id: string;
@@ -60,202 +62,56 @@ interface User {
 }
 
 const RoleManagement: React.FC = () => {
+  const { tenant } = useAuth();
+  const tenantId = tenant?.id as string | undefined;
+
   const [roles, setRoles] = useState<Role[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [selectedRole, setSelectedRole] = useState<Role | null>(null);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!tenantId) return;
     loadData();
-  }, []);
+  }, [tenantId]);
 
   const loadData = async () => {
     try {
       setLoading(true);
-      // Load roles, users, and permissions
-      // This would make API calls to the RBAC endpoints
-      await Promise.all([
-        loadRoles(),
-        loadUsers(),
-        loadPermissions()
+      setError(null);
+
+      const [rolesResp, permsResp] = await Promise.all([
+        rbacApi.getTenantRoles(tenantId!),
+        rbacApi.getTenantPermissions(),
       ]);
-    } catch (error) {
-      console.error('Failed to load RBAC data:', error);
+
+      setRoles(rolesResp as any);
+      setPermissions(permsResp.map((p: any) => ({ ...p, granted: false })) as any);
+
+      // Users remain mocked unless a users API exists for tenant
+      setUsers([]);
+    } catch (err: any) {
+      setError('Failed to load RBAC data');
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const loadRoles = async () => {
-    // Mock data for demonstration
-    const mockRoles: Role[] = [
-      {
-        id: '1',
-        name: 'tenant_admin',
-        display_name: 'Tenant Administrator',
-        description: 'Full tenant management capabilities',
-        is_system_role: true,
-        permissions: []
-      },
-      {
-        id: '2',
-        name: 'security_admin',
-        display_name: 'Security Administrator',
-        description: 'Security and compliance management',
-        is_system_role: true,
-        permissions: []
-      },
-      {
-        id: '3',
-        name: 'analyst',
-        display_name: 'Security Analyst',
-        description: 'Data analysis and reporting',
-        is_system_role: true,
-        permissions: []
-      },
-      {
-        id: '4',
-        name: 'viewer',
-        display_name: 'Viewer',
-        description: 'Read-only access',
-        is_system_role: true,
-        permissions: []
-      }
-    ];
-    setRoles(mockRoles);
-  };
-
-  const loadUsers = async () => {
-    // Mock data for demonstration
-    const mockUsers: User[] = [
-      {
-        id: '1',
-        email: 'admin@democorp.com',
-        first_name: 'Admin',
-        last_name: 'User',
-        roles: [
-          {
-            id: '1',
-            name: 'tenant_admin',
-            display_name: 'Tenant Administrator',
-            description: 'Full tenant management capabilities',
-            is_system_role: true,
-            permissions: []
-          }
-        ]
-      },
-      {
-        id: '2',
-        email: 'analyst@democorp.com',
-        first_name: 'Security',
-        last_name: 'Analyst',
-        roles: [
-          {
-            id: '3',
-            name: 'analyst',
-            display_name: 'Security Analyst',
-            description: 'Data analysis and reporting',
-            is_system_role: true,
-            permissions: []
-          }
-        ]
-      },
-      {
-        id: '3',
-        email: 'viewer@democorp.com',
-        first_name: 'Read',
-        last_name: 'Only',
-        roles: [
-          {
-            id: '4',
-            name: 'viewer',
-            display_name: 'Viewer',
-            description: 'Read-only access',
-            is_system_role: true,
-            permissions: []
-          }
-        ]
-      }
-    ];
-    setUsers(mockUsers);
-  };
-
-  const loadPermissions = async () => {
-    // Mock data for demonstration
-    const mockPermissions: Permission[] = [
-      {
-        id: '1',
-        name: 'assets.create',
-        resource: 'assets',
-        action: 'create',
-        scope: 'tenant',
-        description: 'Create network assets',
-        granted: false
-      },
-      {
-        id: '2',
-        name: 'assets.read',
-        resource: 'assets',
-        action: 'read',
-        scope: 'tenant',
-        description: 'View network assets',
-        granted: true
-      },
-      {
-        id: '3',
-        name: 'sensors.manage',
-        resource: 'sensors',
-        action: 'manage',
-        scope: 'tenant',
-        description: 'Full sensor management',
-        granted: false
-      },
-      {
-        id: '4',
-        name: 'users.manage',
-        resource: 'users',
-        action: 'manage',
-        scope: 'tenant',
-        description: 'Full user management',
-        granted: true
-      }
-    ];
-    setPermissions(mockPermissions);
-  };
-
-  const handleRolePermissionToggle = (permissionId: string, granted: boolean) => {
-    if (selectedRole) {
-      const updatedPermissions = permissions.map(p => 
-        p.id === permissionId ? { ...p, granted } : p
-      );
-      setPermissions(updatedPermissions);
+  const handleRolePermissionToggle = async (permissionId: string, granted: boolean) => {
+    if (!tenantId || !selectedRole) return;
+    try {
+      const updated = permissions.map(p => p.id === permissionId ? { ...p, granted } : p);
+      setPermissions(updated);
+      const permissionIds = updated.filter(p => p.granted).map(p => p.id);
+      await rbacApi.updateRolePermissions(tenantId, selectedRole.id, permissionIds);
+    } catch (err) {
+      console.error('Failed to update role permissions', err);
     }
   };
-
-  // Placeholder functions for future API integration
-  // const handleAssignRole = async (userId: string, roleId: string) => {
-  //   try {
-  //     // API call to assign role
-  //     console.log(`Assigning role ${roleId} to user ${userId}`);
-  //     // await assignUserRole(userId, roleId);
-  //     loadData(); // Reload data
-  //   } catch (error) {
-  //     console.error('Failed to assign role:', error);
-  //   }
-  // };
-
-  // const handleRemoveRole = async (userId: string, roleId: string) => {
-  //   try {
-  //     // API call to remove role
-  //     console.log(`Removing role ${roleId} from user ${userId}`);
-  //     // await removeUserRole(userId, roleId);
-  //     loadData(); // Reload data
-  //   } catch (error) {
-  //     console.error('Failed to remove role:', error);
-  //   }
-  // };
 
   if (loading) {
     return (
@@ -263,6 +119,10 @@ const RoleManagement: React.FC = () => {
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
       </div>
     );
+  }
+
+  if (error) {
+    return <p className="text-sm text-red-600">{error}</p>;
   }
 
   return (
@@ -395,7 +255,7 @@ const RoleManagement: React.FC = () => {
                       ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                       : 'border-gray-200 dark:border-gray-600 hover:border-gray-300 dark:hover:border-gray-500'
                   }`}
-                  onClick={() => setSelectedRole(role)}
+                  onClick={() => setSelectedRole(role as any)}
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -415,7 +275,7 @@ const RoleManagement: React.FC = () => {
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedRole(role);
+                          setSelectedRole(role as any);
                         }}
                         className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                       >
@@ -513,7 +373,7 @@ const RoleManagement: React.FC = () => {
                   {permissions.map((permission) => (
                     <tr key={permission.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                        {permission.description}
+                        {permission.description || permission.name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {permission.resource}
