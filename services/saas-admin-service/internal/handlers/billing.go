@@ -211,6 +211,65 @@ func BillingWebhook(db *sql.DB) gin.HandlerFunc {
 				VALUES ($1, $2, $3, $4::jsonb, NOW())
 				ON CONFLICT (provider_id, external_event_id) DO NOTHING
 			`, providerID, eventType, externalEventID, string(body))
+
+			// Attempt basic subscription sync (Stripe-like payload)
+			if data, ok := payload["data"].(map[string]any); ok {
+				if obj, ok := data["object"].(map[string]any); ok {
+					if subID, ok := obj["id"].(string); ok {
+						status, _ := obj["status"].(string)
+						var startUnix, endUnix float64
+						if v, ok := obj["current_period_start"].(float64); ok { startUnix = v }
+						if v, ok := obj["current_period_end"].(float64); ok { endUnix = v }
+						cancelAtPeriodEnd, _ := obj["cancel_at_period_end"].(bool)
+						planKey := ""
+						if items, ok := obj["items"].(map[string]any); ok {
+							if arr, ok := items["data"].([]any); ok && len(arr) > 0 {
+								if item, ok := arr[0].(map[string]any); ok {
+									if price, ok := item["price"].(map[string]any); ok {
+										if nick, ok := price["nickname"].(string); ok { planKey = nick }
+										if planKey == "" {
+											if lookupKey, ok := price["lookup_key"].(string); ok { planKey = lookupKey }
+										}
+									}
+								}
+							}
+						}
+
+						var tenantID string
+						_ = db.QueryRow(`SELECT tenant_id FROM billing_subscriptions WHERE external_subscription_id = $1`, subID).Scan(&tenantID)
+						if tenantID == "" {
+							if cust, ok := obj["customer"].(string); ok && cust != "" {
+								_ = db.QueryRow(`SELECT tenant_id FROM billing_customers WHERE external_customer_id = $1`, cust).Scan(&tenantID)
+							}
+						}
+
+						var currentStart, currentEnd sql.NullTime
+						if startUnix > 0 { currentStart = sql.NullTime{Time: time.Unix(int64(startUnix), 0).UTC(), Valid: true} }
+						if endUnix > 0 { currentEnd = sql.NullTime{Time: time.Unix(int64(endUnix), 0).UTC(), Valid: true} }
+
+						if tenantID != "" {
+							_, _ = db.Exec(`
+								INSERT INTO billing_subscriptions (tenant_id, provider_id, external_subscription_id, plan_key, status, current_period_start, current_period_end, cancel_at_period_end)
+								VALUES ($1, $2, $3, COALESCE(NULLIF($4, ''), 'unknown'), $5, $6, $7, $8)
+								ON CONFLICT (tenant_id, provider_id, external_subscription_id) DO UPDATE
+								SET plan_key = COALESCE(NULLIF($4, ''), billing_subscriptions.plan_key),
+									status = $5,
+									current_period_start = $6,
+									current_period_end = $7,
+									cancel_at_period_end = $8,
+									updated_at = NOW()
+							`, tenantID, providerID, subID, planKey, status, currentStart.Time, currentEnd.Time, cancelAtPeriodEnd)
+
+							if planKey != "" {
+								var tierID string
+								if err := db.QueryRow(`SELECT id FROM subscription_tiers WHERE name = $1`, planKey).Scan(&tierID); err == nil {
+									_, _ = db.Exec(`UPDATE tenants SET subscription_tier_id = $1, updated_at = NOW() WHERE id = $2`, tierID, tenantID)
+								}
+							}
+						}
+					}
+				}
+			}
 		}
 
 		c.JSON(http.StatusOK, gin.H{"status": "received"})

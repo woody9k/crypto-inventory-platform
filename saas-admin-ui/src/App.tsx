@@ -9,6 +9,7 @@ import TenantsPage from './pages/TenantsPage';
 import UsersPage from './pages/UsersPage';
 import SettingsPage from './pages/SettingsPage';
 import TenantBillingPage from './pages/TenantBillingPage';
+import InvoicesPage from './pages/InvoicesPage';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -76,6 +77,16 @@ function App() {
                   <ProtectedRoute>
                     <Layout>
                       <TenantBillingPage />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/invoices"
+                element={
+                  <ProtectedRoute>
+                    <Layout>
+                      <InvoicesPage />
                     </Layout>
                   </ProtectedRoute>
                 }
