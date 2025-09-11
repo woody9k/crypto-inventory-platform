@@ -321,6 +321,25 @@ services:
       - crypto-network
     restart: unless-stopped
 
+  saas-admin-ui:
+    build:
+      context: ./saas-admin-ui
+      dockerfile: Dockerfile.dev
+    container_name: crypto-saas-admin-ui
+    environment:
+      - VITE_API_GATEWAY_URL=http://localhost:8080
+      - VITE_PLATFORM_ADMIN_API_URL=http://localhost:8084
+      - CHOKIDAR_USEPOLLING=true
+      - WATCHPACK_POLLING=true
+    ports:
+      - "3002:3002"
+    volumes:
+      - ./saas-admin-ui:/app
+      - /app/node_modules
+    networks:
+      - crypto-network
+    restart: unless-stopped
+
   # =================================================================
   # Development Tools
   # =================================================================

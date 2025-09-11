@@ -32,7 +32,8 @@ docker-compose logs -f
 ```
 
 ### 3. Access the Platform
-- **Main Application**: http://localhost:3000
+- **Tenant Application (web-ui)**: http://localhost:3000
+- **Platform Admin UI (saas-admin-ui)**: http://localhost:3002
 - **API Gateway**: http://localhost:8080
 - **Grafana Dashboard**: http://localhost:3001 (admin/admin123)
 - **Database Admin**: http://localhost:8090
@@ -195,6 +196,13 @@ docker-compose up -d postgres redis influxdb nats auth-service inventory-service
 cd web-ui
 npm install
 npm run dev
+
+### Platform Admin UI Development
+```bash
+cd saas-admin-ui
+npm install
+npm run dev -- --port 3002
+```
 ```
 
 ## Production Deployment

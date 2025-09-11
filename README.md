@@ -41,8 +41,9 @@ docker-compose ps
 **Note**: The platform now runs entirely in Docker containers. The frontend is served by nginx on port 3000.
 
 3. **Access the platform**:
-- **Main Application**: http://localhost:3000
-- **API Gateway**: http://localhost:8080
+- **Tenant Application (web-ui)**: http://localhost:3000
+- **Platform Admin UI (saas-admin-ui)**: http://localhost:3002
+- **API Gateway**: http://localhost:8080 (frontend calls go through here)
 - **Grafana Dashboard**: http://localhost:3001 (admin/admin123)
 - **Database Admin**: http://localhost:8090
 
@@ -84,8 +85,8 @@ The platform includes a comprehensive reports system accessible at `/reports`:
 | **Auth Service** | 8081 | Tenant authentication | Go + Gin + JWT |
 | **Inventory Service** | 8082 | Asset management | Go + Gin + PostgreSQL |
 | **SaaS Admin Service** | 8084 | Platform administration | Go + Gin + JWT |
-| **Tenant UI** | 3001 | Tenant interface | React + TypeScript + Vite |
-| **SaaS Admin UI** | 3002 | Platform admin interface | HTML/JS + TailwindCSS |
+| **Tenant UI** | 3000 | Tenant interface | React + TypeScript + Vite |
+| **SaaS Admin UI** | 3002 | Platform admin interface | Vite app (see saas-admin-ui) |
 | **PostgreSQL** | 5432 | Primary database | PostgreSQL 15 |
 | **Redis** | 6379 | Caching & sessions | Redis 7 |
 | **InfluxDB** | 8086 | Time series data | InfluxDB 2.7 |
@@ -208,17 +209,17 @@ docker exec crypto-postgres psql -U crypto_user -d crypto_inventory -f /scripts/
 
 ### Key Endpoints
 
-**Authentication Service** (`:8081`):
+**Authentication Service** (`:8081`, via gateway `:8080` at `/api/v1/auth`):
 - `POST /api/v1/auth/login` - Tenant user login
 - `POST /api/v1/auth/register` - Tenant user registration
 - `POST /api/v1/auth/refresh` - Token refresh
 
-**Inventory Service** (`:8082`):
+**Inventory Service** (`:8082`, via gateway `:8080` at `/api/v1/inventory`):
 - `GET /api/v1/assets` - List assets
 - `POST /api/v1/assets` - Create asset
 - `GET /api/v1/assets/:id` - Get asset details
 
-**SaaS Admin Service** (`:8084`):
+**SaaS Admin Service** (`:8084`, direct API; consider routing via gateway):
 - `POST /api/v1/auth/login` - Platform admin login
 - `GET /api/v1/admin/tenants` - List all tenants
 - `GET /api/v1/admin/stats/platform` - Platform statistics

@@ -87,17 +87,27 @@ test: test-unit test-integration ## Run unit and integration tests
 
 # Database Commands
 db-migrate: ## Run database migrations
-	docker-compose exec postgres psql -U crypto_user -d crypto_inventory -f /docker-entrypoint-initdb.d/migrations.sql
+	# Apply migrations script as mounted in docker-compose (03-migrations.sql)
+	docker-compose exec postgres psql -U crypto_user -d crypto_inventory -f /docker-entrypoint-initdb.d/03-migrations.sql
 
 db-seed: ## Seed database with test data
-	docker-compose exec postgres psql -U crypto_user -d crypto_inventory -f /docker-entrypoint-initdb.d/seed.sql
+	# Apply seed script as mounted in docker-compose (04-seed.sql)
+	docker-compose exec postgres psql -U crypto_user -d crypto_inventory -f /docker-entrypoint-initdb.d/04-seed.sql
 
 db-reset: ## Reset database (WARNING: destroys all data)
 	docker-compose down -v
-	docker-compose up -d postgres redis influxdb
+	# Start infrastructure first (align with Startup Guide)
+	docker-compose up -d postgres redis influxdb nats
 	sleep 10
 	$(MAKE) db-migrate
 	$(MAKE) db-seed
+
+# Infrastructure convenience targets (align with Startup Guide)
+infra-up: ## Start core infrastructure services (postgres, redis, influxdb, nats)
+	docker-compose up -d postgres redis influxdb nats
+
+infra-down: ## Stop core infrastructure services
+	docker-compose stop postgres redis influxdb nats
 
 # Development Setup
 install-deps: ## Install development dependencies
