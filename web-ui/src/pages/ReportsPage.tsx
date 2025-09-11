@@ -15,7 +15,6 @@ import {
   ChartBarIcon,
   ShieldCheckIcon,
   ExclamationTriangleIcon,
-  ArrowDownTrayIcon,
   EyeIcon,
   TrashIcon,
   PlusIcon,
@@ -116,12 +115,7 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
    */
   const handleDownloadReport = async (reportId: string, format: 'pdf' | 'excel' | 'json') => {
     try {
-      const response = await fetch(`/api/v1/reports/${reportId}/download?format=${format}`);
-      if (!response.ok) {
-        throw new Error('Download failed');
-      }
-      
-      const blob = await response.blob();
+      const blob = await reportsApi.download(reportId, format);
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -137,7 +131,7 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
 
   // State for report viewer modal
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
-  const [isViewerOpen, setIsViewerOpen] = useState(false);
+  const [, setIsViewerOpen] = useState(false);
 
   /**
    * Opens the report viewer modal with the selected report
@@ -421,15 +415,15 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">Status</h4>
-                    <Badge 
-                      className={`${
-                        selectedReport.status === 'completed' 
+                    <span
+                      className={`inline-flex items-center px-2 py-1 rounded text-xs font-semibold ${
+                        selectedReport.status === 'completed'
                           ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
                           : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
                       }`}
                     >
                       {selectedReport.status}
-                    </Badge>
+                    </span>
                   </div>
                   <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
                     <h4 className="font-medium text-gray-900 dark:text-white mb-2">Generated</h4>

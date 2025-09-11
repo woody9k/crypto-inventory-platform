@@ -11,6 +11,7 @@ export interface ReportItem {
   created_at: string;
   completed_at?: string;
   download_url?: string;
+  data?: any;
 }
 
 export interface ReportTemplateItem {
@@ -43,5 +44,11 @@ export const reportsApi = {
   async templates(): Promise<ReportTemplateItem[]> {
     const res = await api.get(`${REPORTS_BASE}/reports/templates`);
     return res.data.templates ?? res.data ?? [];
+  },
+  async download(id: string, format: 'pdf' | 'excel' | 'json'): Promise<Blob> {
+    const res = await api.get(`${REPORTS_BASE}/reports/${id}/download?format=${format}` as any, {
+      responseType: 'blob',
+    } as any);
+    return res.data as Blob;
   },
 };
