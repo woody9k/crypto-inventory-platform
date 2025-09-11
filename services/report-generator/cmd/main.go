@@ -51,10 +51,11 @@ func main() {
 		// Report generation and management endpoints
 		api.POST("/reports/generate", handler.GenerateReport)     // Generate new reports
 		api.GET("/reports/templates", handler.GetReportTemplates) // Get available templates
-		api.GET("/reports/:id", handler.GetReport)                // Get specific report
+		api.GET("/reports/:id/download", handler.DownloadReport)  // Download report in various formats (PDF, Excel, JSON)
+		api.GET("/reports/:id", handler.GetReport)                // Get specific report details
 		api.GET("/reports", handler.ListReports)                  // List all reports
 		api.DELETE("/reports/:id", handler.DeleteReport)          // Delete report
-		
+
 		// Quick demo endpoints for immediate data access
 		// These provide sample data for demonstration purposes
 		api.GET("/reports/demo/crypto-summary", handler.GetCryptoSummary)

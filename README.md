@@ -59,6 +59,9 @@ The platform includes a comprehensive reports system accessible at `/reports`:
 - **Report Types**: Crypto summary, compliance status, network topology, risk assessment, certificate audit
 - **Report Generation**: Create reports on-demand with various templates
 - **Report Management**: View, download, and delete generated reports
+- **Multi-Format Downloads**: PDF, Excel (CSV), and JSON formats available
+- **Interactive Report Viewer**: Beautiful modal with formatted data visualization
+- **Real-time Status**: Live updates during report generation process
 - **API Endpoints**: All report operations available via `/api/v1/reports/` through the API gateway
 
 ### Default Credentials
@@ -377,6 +380,9 @@ If the reports page shows blank or fails to load:
 3. **Test API Endpoints**: 
    - Reports list: `curl http://localhost:8080/api/v1/reports/`
    - Templates: `curl http://localhost:8080/api/v1/reports/templates`
+   - Download PDF: `curl "http://localhost:8080/api/v1/reports/{id}/download?format=pdf"`
+   - Download Excel: `curl "http://localhost:8080/api/v1/reports/{id}/download?format=excel"`
+   - Download JSON: `curl "http://localhost:8080/api/v1/reports/{id}/download?format=json"`
 4. **Check Logs**: Review API gateway logs: `docker-compose logs api-gateway`
 
 ### Service Communication

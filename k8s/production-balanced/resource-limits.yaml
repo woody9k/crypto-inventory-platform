@@ -1,0 +1,131 @@
+# Crypto Inventory Platform - Balanced Performance Resource Limits
+# Optimized for $72/month (4 hours/day usage)
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crypto-inventory-config
+  namespace: crypto-inventory
+data:
+  # Service configurations for balanced performance
+  AUTH_SERVICE_CPU: "200m"
+  AUTH_SERVICE_MEMORY: "256Mi"
+  AUTH_SERVICE_REPLICAS: "2"
+  
+  INVENTORY_SERVICE_CPU: "500m"
+  INVENTORY_SERVICE_MEMORY: "512Mi"
+  INVENTORY_SERVICE_REPLICAS: "2"
+  
+  COMPLIANCE_SERVICE_CPU: "200m"
+  COMPLIANCE_SERVICE_MEMORY: "256Mi"
+  COMPLIANCE_SERVICE_REPLICAS: "1"
+  
+  AI_SERVICE_CPU: "1000m"
+  AI_SERVICE_MEMORY: "1Gi"
+  AI_SERVICE_REPLICAS: "1"
+  
+  SENSOR_MANAGER_CPU: "500m"
+  SENSOR_MANAGER_MEMORY: "512Mi"
+  SENSOR_MANAGER_REPLICAS: "1"
+  
+  REPORT_SERVICE_CPU: "200m"
+  REPORT_SERVICE_MEMORY: "256Mi"
+  REPORT_SERVICE_REPLICAS: "1"
+
+---
+# Horizontal Pod Autoscaler for inventory service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: inventory-service-hpa
+  namespace: crypto-inventory
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: inventory-service
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# Horizontal Pod Autoscaler for auth service
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: auth-service-hpa
+  namespace: crypto-inventory
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: auth-service
+  minReplicas: 2
+  maxReplicas: 3
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# Resource Quota for namespace
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: crypto-inventory-quota
+  namespace: crypto-inventory
+spec:
+  hard:
+    requests.cpu: "4"
+    requests.memory: "4Gi"
+    limits.cpu: "6"
+    limits.memory: "6Gi"
+    persistentvolumeclaims: "10"
+    services: "10"
+    secrets: "10"
+    configmaps: "10"
+
+---
+# Limit Range for pods
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: crypto-inventory-limits
+  namespace: crypto-inventory
+spec:
+  limits:
+  - default:
+      cpu: "500m"
+      memory: "512Mi"
+    defaultRequest:
+      cpu: "100m"
+      memory: "128Mi"
+    type: Container
+  - max:
+      cpu: "2"
+      memory: "2Gi"
+    min:
+      cpu: "50m"
+      memory: "64Mi"
+    type: Container

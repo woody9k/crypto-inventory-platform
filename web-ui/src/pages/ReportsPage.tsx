@@ -1,3 +1,14 @@
+/**
+ * ReportsPage Component
+ * 
+ * Provides a comprehensive interface for managing reports including:
+ * - Generating new reports with various templates
+ * - Viewing report status and details
+ * - Downloading reports in multiple formats (PDF, Excel, JSON)
+ * - Interactive report viewer with formatted data visualization
+ * - Real-time status updates during report generation
+ */
+
 import React, { useState, useEffect } from 'react';
 import { 
   DocumentTextIcon,
@@ -10,7 +21,10 @@ import {
   PlusIcon,
   ClockIcon,
   CheckCircleIcon,
-  XCircleIcon
+  XCircleIcon,
+  DocumentArrowDownIcon,
+  TableCellsIcon,
+  CodeBracketIcon
 } from '@heroicons/react/24/outline';
 import { reportsApi, ReportItem, ReportTemplateItem } from '../services/reportsApi';
 
@@ -94,10 +108,44 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
     }
   };
 
-  const handleDownloadReport = (report: ReportItem) => {
-    if (report.download_url) {
-      window.open(report.download_url, '_blank');
+  /**
+   * Handles downloading reports in various formats (PDF, Excel, JSON)
+   * Creates a blob from the API response and triggers a download
+   * @param reportId - The ID of the report to download
+   * @param format - The desired download format ('pdf', 'excel', 'json')
+   */
+  const handleDownloadReport = async (reportId: string, format: 'pdf' | 'excel' | 'json') => {
+    try {
+      const response = await fetch(`/api/v1/reports/${reportId}/download?format=${format}`);
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `report-${reportId}.${format === 'excel' ? 'xlsx' : format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Error downloading report:', error);
     }
+  };
+
+  // State for report viewer modal
+  const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
+  const [isViewerOpen, setIsViewerOpen] = useState(false);
+
+  /**
+   * Opens the report viewer modal with the selected report
+   * @param report - The report to display in the viewer
+   */
+  const handleViewReport = (report: ReportItem) => {
+    setSelectedReport(report);
+    setIsViewerOpen(true);
   };
 
   const handleDeleteReport = async (reportId: string) => {
@@ -254,16 +302,36 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    {report.status === 'completed' && report.download_url && (
-                      <button
-                        onClick={() => handleDownloadReport(report)}
-                        className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
-                      >
-                        <ArrowDownTrayIcon className="h-4 w-4 mr-1" />
-                        Download
-                      </button>
+                    {report.status === 'completed' && (
+                      <div className="flex items-center space-x-1">
+                        <button
+                          onClick={() => handleDownloadReport(report.id, 'pdf')}
+                          className="inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                          title="Download PDF"
+                        >
+                          <DocumentArrowDownIcon className="h-3 w-3 mr-1" />
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => handleDownloadReport(report.id, 'excel')}
+                          className="inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                          title="Download Excel"
+                        >
+                          <TableCellsIcon className="h-3 w-3 mr-1" />
+                          Excel
+                        </button>
+                        <button
+                          onClick={() => handleDownloadReport(report.id, 'json')}
+                          className="inline-flex items-center px-2 py-1 border border-gray-300 dark:border-gray-600 text-xs font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                          title="Download JSON"
+                        >
+                          <CodeBracketIcon className="h-3 w-3 mr-1" />
+                          JSON
+                        </button>
+                      </div>
                     )}
                     <button
+                      onClick={() => handleViewReport(report)}
                       className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
                     >
                       <EyeIcon className="h-4 w-4 mr-1" />
@@ -320,6 +388,174 @@ const ReportsPage: React.FC<ReportsPageProps> = () => {
                 >
                   Cancel
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Viewer Dialog */}
+      {selectedReport && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                {selectedReport.title}
+              </h3>
+              <button
+                onClick={() => setIsViewerOpen(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              >
+                <XCircleIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              <div className="space-y-6">
+                {/* Report Header */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">Report Type</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-300 capitalize">
+                      {selectedReport.type.replace('_', ' ')}
+                    </p>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">Status</h4>
+                    <Badge 
+                      className={`${
+                        selectedReport.status === 'completed' 
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                          : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
+                      }`}
+                    >
+                      {selectedReport.status}
+                    </Badge>
+                  </div>
+                  <div className="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                    <h4 className="font-medium text-gray-900 dark:text-white mb-2">Generated</h4>
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      {formatDate(selectedReport.created_at)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Report Data */}
+                <div className="bg-gray-50 dark:bg-gray-700 p-6 rounded-lg">
+                  <h4 className="font-medium text-gray-900 dark:text-white mb-4">Report Data</h4>
+                  <div className="space-y-4">
+                    {selectedReport.data && (
+                      <div className="space-y-4">
+                        {/* Summary Section */}
+                        {selectedReport.data.summary && (
+                          <div>
+                            <h5 className="font-medium text-gray-900 dark:text-white mb-2">Summary</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                              {Object.entries(selectedReport.data.summary).map(([key, value]) => (
+                                <div key={key} className="bg-white dark:bg-gray-800 p-3 rounded border">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">
+                                    {key.replace('_', ' ')}
+                                  </p>
+                                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {typeof value === 'number' ? value.toLocaleString() : String(value)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Protocol Breakdown */}
+                        {selectedReport.data.by_protocol && (
+                          <div>
+                            <h5 className="font-medium text-gray-900 dark:text-white mb-2">Protocol Breakdown</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                              {Object.entries(selectedReport.data.by_protocol).map(([protocol, count]) => (
+                                <div key={protocol} className="bg-white dark:bg-gray-800 p-3 rounded border">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">{protocol}</p>
+                                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {typeof count === 'number' ? count.toLocaleString() : String(count)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Algorithm Breakdown */}
+                        {selectedReport.data.by_algorithm && (
+                          <div>
+                            <h5 className="font-medium text-gray-900 dark:text-white mb-2">Algorithm Breakdown</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                              {Object.entries(selectedReport.data.by_algorithm).map(([algorithm, count]) => (
+                                <div key={algorithm} className="bg-white dark:bg-gray-800 p-3 rounded border">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">{algorithm}</p>
+                                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {typeof count === 'number' ? count.toLocaleString() : String(count)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Risk Levels */}
+                        {selectedReport.data.risk_levels && (
+                          <div>
+                            <h5 className="font-medium text-gray-900 dark:text-white mb-2">Risk Levels</h5>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                              {Object.entries(selectedReport.data.risk_levels).map(([level, count]) => (
+                                <div key={level} className="bg-white dark:bg-gray-800 p-3 rounded border">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 capitalize">{level}</p>
+                                  <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                                    {typeof count === 'number' ? count.toLocaleString() : String(count)}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Raw Data for other report types */}
+                        {!selectedReport.data.summary && !selectedReport.data.by_protocol && !selectedReport.data.by_algorithm && (
+                          <div>
+                            <h5 className="font-medium text-gray-900 dark:text-white mb-2">Report Details</h5>
+                            <pre className="bg-white dark:bg-gray-800 p-4 rounded border overflow-x-auto text-sm text-gray-600 dark:text-gray-300">
+                              {JSON.stringify(selectedReport.data, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Download Actions */}
+                <div className="flex items-center justify-between pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-600 dark:text-gray-400">Download as:</span>
+                    <button
+                      onClick={() => handleDownloadReport(selectedReport.id, 'pdf')}
+                      className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <DocumentArrowDownIcon className="h-4 w-4 mr-1" />
+                      PDF
+                    </button>
+                    <button
+                      onClick={() => handleDownloadReport(selectedReport.id, 'excel')}
+                      className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <TableCellsIcon className="h-4 w-4 mr-1" />
+                      Excel
+                    </button>
+                    <button
+                      onClick={() => handleDownloadReport(selectedReport.id, 'json')}
+                      className="inline-flex items-center px-3 py-1 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600"
+                    >
+                      <CodeBracketIcon className="h-4 w-4 mr-1" />
+                      JSON
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

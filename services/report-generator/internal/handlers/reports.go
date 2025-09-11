@@ -4,6 +4,7 @@ package handlers
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -16,10 +17,10 @@ import (
 // the report ID for tracking.
 func (h *Handler) GenerateReport(c *gin.Context) {
 	var req struct {
-		Type       string                 `json:"type" binding:"required"`       // Report type (crypto_summary, compliance_status, etc.)
-		Title      string                 `json:"title"`                         // Optional custom title
-		Parameters map[string]interface{} `json:"parameters"`                    // Report-specific parameters
-		Format     string                 `json:"format"`                        // Output format (pdf, excel, json)
+		Type       string                 `json:"type" binding:"required"` // Report type (crypto_summary, compliance_status, etc.)
+		Title      string                 `json:"title"`                   // Optional custom title
+		Parameters map[string]interface{} `json:"parameters"`              // Report-specific parameters
+		Format     string                 `json:"format"`                  // Output format (pdf, excel, json)
 	}
 
 	// Parse and validate the request body
@@ -30,7 +31,7 @@ func (h *Handler) GenerateReport(c *gin.Context) {
 
 	// Generate unique report ID for tracking
 	reportID := uuid.New().String()
-	
+
 	// Set default title if not provided by user
 	if req.Title == "" {
 		req.Title = fmt.Sprintf("%s Report", req.Type)
@@ -115,7 +116,7 @@ func (h *Handler) generateReportAsync(reportID, reportType, format string) {
 // Returns the complete report data including status, content, and metadata.
 func (h *Handler) GetReport(c *gin.Context) {
 	reportID := c.Param("id")
-	
+
 	// Look up report in storage
 	report, exists := h.reports[reportID]
 	if !exists {
@@ -142,7 +143,7 @@ func (h *Handler) ListReports(c *gin.Context) {
 // This permanently deletes the report and its associated data.
 func (h *Handler) DeleteReport(c *gin.Context) {
 	reportID := c.Param("id")
-	
+
 	// Check if report exists before attempting deletion
 	if _, exists := h.reports[reportID]; !exists {
 		c.JSON(404, gin.H{"error": "Report not found"})
@@ -152,6 +153,124 @@ func (h *Handler) DeleteReport(c *gin.Context) {
 	// Remove report from storage
 	delete(h.reports, reportID)
 	c.JSON(200, gin.H{"message": "Report deleted successfully"})
+}
+
+// DownloadReport handles report downloads in various formats (PDF, JSON, Excel).
+// This endpoint serves the actual report files for download by the frontend.
+func (h *Handler) DownloadReport(c *gin.Context) {
+	reportID := c.Param("id")
+	format := c.Query("format")
+
+	// Default to JSON if no format specified
+	if format == "" {
+		format = "json"
+	}
+
+	// Look up report in storage
+	report, exists := h.reports[reportID]
+	if !exists {
+		c.JSON(404, gin.H{"error": "Report not found"})
+		return
+	}
+
+	// Check if report is completed
+	if report.Status != "completed" {
+		c.JSON(400, gin.H{"error": "Report not ready for download"})
+		return
+	}
+
+	// Generate file based on requested format
+	switch format {
+	case "pdf":
+		h.generatePDFReport(c, report)
+	case "excel":
+		h.generateExcelReport(c, report)
+	case "json":
+		h.generateJSONReport(c, report)
+	default:
+		c.JSON(400, gin.H{"error": "Unsupported format. Use: pdf, excel, or json"})
+	}
+}
+
+// generatePDFReport creates a PDF version of the report.
+// In production, this would use a proper PDF library like wkhtmltopdf or similar.
+func (h *Handler) generatePDFReport(c *gin.Context, report *Report) {
+	// For demo purposes, we'll return a simple text representation
+	// In production, you'd use a proper PDF generation library
+	content := h.formatReportAsText(report)
+
+	c.Header("Content-Type", "application/pdf")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.pdf\"", report.Title))
+	c.String(200, content)
+}
+
+// generateExcelReport creates an Excel version of the report.
+// In production, this would use a proper Excel library like excelize.
+func (h *Handler) generateExcelReport(c *gin.Context, report *Report) {
+	// For demo purposes, we'll return a CSV representation
+	// In production, you'd use a proper Excel generation library
+	content := h.formatReportAsCSV(report)
+
+	c.Header("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.xlsx\"", report.Title))
+	c.String(200, content)
+}
+
+// generateJSONReport creates a JSON version of the report.
+func (h *Handler) generateJSONReport(c *gin.Context, report *Report) {
+	c.Header("Content-Type", "application/json")
+	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.json\"", report.Title))
+	c.JSON(200, report)
+}
+
+// formatReportAsText formats the report data as plain text for PDF generation.
+func (h *Handler) formatReportAsText(report *Report) string {
+	content := fmt.Sprintf("Report: %s\n", report.Title)
+	content += fmt.Sprintf("Type: %s\n", report.Type)
+	content += fmt.Sprintf("Generated: %s\n", report.CreatedAt.Format("2006-01-02 15:04:05"))
+	content += "=" + strings.Repeat("=", 50) + "\n\n"
+
+	// Format data based on report type
+	switch report.Type {
+	case "crypto_summary":
+		content += h.formatCryptoSummaryAsText(report.Data)
+	case "compliance_status":
+		content += h.formatComplianceStatusAsText(report.Data)
+	case "network_topology":
+		content += h.formatNetworkTopologyAsText(report.Data)
+	case "risk_assessment":
+		content += h.formatRiskAssessmentAsText(report.Data)
+	default:
+		content += "Report data:\n"
+		content += fmt.Sprintf("%+v\n", report.Data)
+	}
+
+	return content
+}
+
+// formatReportAsCSV formats the report data as CSV for Excel generation.
+func (h *Handler) formatReportAsCSV(report *Report) string {
+	var content strings.Builder
+	content.WriteString(fmt.Sprintf("Report,Type,Generated\n"))
+	content.WriteString(fmt.Sprintf("%s,%s,%s\n", report.Title, report.Type, report.CreatedAt.Format("2006-01-02 15:04:05")))
+	content.WriteString("\n")
+
+	// Format data based on report type
+	switch report.Type {
+	case "crypto_summary":
+		content.WriteString(h.formatCryptoSummaryAsCSV(report.Data))
+	case "compliance_status":
+		content.WriteString(h.formatComplianceStatusAsCSV(report.Data))
+	case "network_topology":
+		content.WriteString(h.formatNetworkTopologyAsCSV(report.Data))
+	case "risk_assessment":
+		content.WriteString(h.formatRiskAssessmentAsCSV(report.Data))
+	default:
+		content.WriteString("Data\n")
+		content.WriteString(fmt.Sprintf("%+v\n", report.Data))
+	}
+
+	return content.String()
 }
 
 // GetReportTemplates returns the list of available report templates.
@@ -410,4 +529,284 @@ func (h *Handler) generateRiskAssessmentData() map[string]interface{} {
 			},
 		},
 	}
+}
+
+// Formatting functions for different report types
+
+// formatCryptoSummaryAsText formats crypto summary data as text
+func (h *Handler) formatCryptoSummaryAsText(data interface{}) string {
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return "Invalid data format\n"
+	}
+
+	content := "CRYPTO SUMMARY REPORT\n"
+	content += strings.Repeat("-", 30) + "\n\n"
+
+	// Summary section
+	if summary, ok := dataMap["summary"].(map[string]interface{}); ok {
+		content += "SUMMARY:\n"
+		content += fmt.Sprintf("  Total Implementations: %v\n", summary["total_implementations"])
+		content += fmt.Sprintf("  TLS Connections: %v\n", summary["tls_connections"])
+		content += fmt.Sprintf("  SSH Servers: %v\n", summary["ssh_servers"])
+		content += fmt.Sprintf("  Certificates: %v\n", summary["certificates"])
+		content += fmt.Sprintf("  Weak Algorithms: %v\n", summary["weak_algorithms"])
+		content += fmt.Sprintf("  Expired Certificates: %v\n", summary["expired_certificates"])
+		content += "\n"
+	}
+
+	// Protocol breakdown
+	if protocols, ok := dataMap["by_protocol"].(map[string]interface{}); ok {
+		content += "PROTOCOL BREAKDOWN:\n"
+		for protocol, count := range protocols {
+			content += fmt.Sprintf("  %s: %v\n", protocol, count)
+		}
+		content += "\n"
+	}
+
+	// Algorithm breakdown
+	if algorithms, ok := dataMap["by_algorithm"].(map[string]interface{}); ok {
+		content += "ALGORITHM BREAKDOWN:\n"
+		for algorithm, count := range algorithms {
+			content += fmt.Sprintf("  %s: %v\n", algorithm, count)
+		}
+		content += "\n"
+	}
+
+	// Risk levels
+	if risks, ok := dataMap["risk_levels"].(map[string]interface{}); ok {
+		content += "RISK LEVELS:\n"
+		for level, count := range risks {
+			content += fmt.Sprintf("  %s: %v\n", strings.Title(level), count)
+		}
+	}
+
+	return content
+}
+
+// formatCryptoSummaryAsCSV formats crypto summary data as CSV
+func (h *Handler) formatCryptoSummaryAsCSV(data interface{}) string {
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return "Invalid data format\n"
+	}
+
+	var content strings.Builder
+	content.WriteString("Metric,Value\n")
+
+	// Summary section
+	if summary, ok := dataMap["summary"].(map[string]interface{}); ok {
+		for key, value := range summary {
+			content.WriteString(fmt.Sprintf("%s,%v\n", key, value))
+		}
+	}
+
+	return content.String()
+}
+
+// formatComplianceStatusAsText formats compliance status data as text
+func (h *Handler) formatComplianceStatusAsText(data interface{}) string {
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return "Invalid data format\n"
+	}
+
+	content := "COMPLIANCE STATUS REPORT\n"
+	content += strings.Repeat("-", 30) + "\n\n"
+
+	// Overall score
+	if score, ok := dataMap["overall_score"].(float64); ok {
+		content += fmt.Sprintf("Overall Compliance Score: %.0f%%\n\n", score)
+	}
+
+	// Framework details
+	if frameworks, ok := dataMap["frameworks"].([]interface{}); ok {
+		content += "FRAMEWORK DETAILS:\n"
+		for _, fw := range frameworks {
+			if fwMap, ok := fw.(map[string]interface{}); ok {
+				content += fmt.Sprintf("  %s %s: %.0f%% (%s)\n",
+					fwMap["name"], fwMap["version"], fwMap["score"], fwMap["status"])
+				content += fmt.Sprintf("    Requirements: %.0f/%.0f\n",
+					fwMap["requirements_met"], fwMap["requirements_total"])
+				content += fmt.Sprintf("    Critical Issues: %.0f, High Issues: %.0f\n",
+					fwMap["critical_issues"], fwMap["high_issues"])
+				content += "\n"
+			}
+		}
+	}
+
+	// Recommendations
+	if recommendations, ok := dataMap["recommendations"].([]interface{}); ok {
+		content += "RECOMMENDATIONS:\n"
+		for i, rec := range recommendations {
+			content += fmt.Sprintf("  %d. %s\n", i+1, rec)
+		}
+	}
+
+	return content
+}
+
+// formatComplianceStatusAsCSV formats compliance status data as CSV
+func (h *Handler) formatComplianceStatusAsCSV(data interface{}) string {
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return "Invalid data format\n"
+	}
+
+	var content strings.Builder
+	content.WriteString("Framework,Version,Score,Status,Requirements Met,Total Requirements,Critical Issues,High Issues\n")
+
+	if frameworks, ok := dataMap["frameworks"].([]interface{}); ok {
+		for _, fw := range frameworks {
+			if fwMap, ok := fw.(map[string]interface{}); ok {
+				content.WriteString(fmt.Sprintf("%s,%s,%.0f,%s,%.0f,%.0f,%.0f,%.0f\n",
+					fwMap["name"], fwMap["version"], fwMap["score"], fwMap["status"],
+					fwMap["requirements_met"], fwMap["requirements_total"],
+					fwMap["critical_issues"], fwMap["high_issues"]))
+			}
+		}
+	}
+
+	return content.String()
+}
+
+// formatNetworkTopologyAsText formats network topology data as text
+func (h *Handler) formatNetworkTopologyAsText(data interface{}) string {
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return "Invalid data format\n"
+	}
+
+	content := "NETWORK TOPOLOGY REPORT\n"
+	content += strings.Repeat("-", 30) + "\n\n"
+
+	// Coverage information
+	if coverage, ok := dataMap["coverage"].(map[string]interface{}); ok {
+		content += "COVERAGE SUMMARY:\n"
+		content += fmt.Sprintf("  Total Networks: %.0f\n", coverage["total_networks"])
+		content += fmt.Sprintf("  Monitored Networks: %.0f\n", coverage["monitored_networks"])
+		content += fmt.Sprintf("  Coverage Percentage: %.1f%%\n", coverage["coverage_percentage"])
+		content += "\n"
+	}
+
+	// Sensor details
+	if sensors, ok := dataMap["sensors"].([]interface{}); ok {
+		content += "SENSOR DETAILS:\n"
+		for _, sensor := range sensors {
+			if sensorMap, ok := sensor.(map[string]interface{}); ok {
+				content += fmt.Sprintf("  %s (%s)\n", sensorMap["name"], sensorMap["id"])
+				content += fmt.Sprintf("    Status: %s\n", sensorMap["status"])
+				content += fmt.Sprintf("    Location: %s\n", sensorMap["location"])
+				content += fmt.Sprintf("    Discoveries: %.0f\n", sensorMap["discoveries"])
+				content += fmt.Sprintf("    Last Seen: %s\n", sensorMap["last_seen"])
+				content += "\n"
+			}
+		}
+	}
+
+	return content
+}
+
+// formatNetworkTopologyAsCSV formats network topology data as CSV
+func (h *Handler) formatNetworkTopologyAsCSV(data interface{}) string {
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return "Invalid data format\n"
+	}
+
+	var content strings.Builder
+	content.WriteString("Sensor ID,Name,Status,Location,Discoveries,Last Seen\n")
+
+	if sensors, ok := dataMap["sensors"].([]interface{}); ok {
+		for _, sensor := range sensors {
+			if sensorMap, ok := sensor.(map[string]interface{}); ok {
+				content.WriteString(fmt.Sprintf("%s,%s,%s,%s,%.0f,%s\n",
+					sensorMap["id"], sensorMap["name"], sensorMap["status"],
+					sensorMap["location"], sensorMap["discoveries"], sensorMap["last_seen"]))
+			}
+		}
+	}
+
+	return content.String()
+}
+
+// formatRiskAssessmentAsText formats risk assessment data as text
+func (h *Handler) formatRiskAssessmentAsText(data interface{}) string {
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return "Invalid data format\n"
+	}
+
+	content := "RISK ASSESSMENT REPORT\n"
+	content += strings.Repeat("-", 30) + "\n\n"
+
+	// Overall risk score
+	if score, ok := dataMap["overall_risk_score"].(float64); ok {
+		content += fmt.Sprintf("Overall Risk Score: %.1f\n", score)
+	}
+	if level, ok := dataMap["risk_level"].(string); ok {
+		content += fmt.Sprintf("Risk Level: %s\n\n", strings.Title(level))
+	}
+
+	// Critical findings
+	if findings, ok := dataMap["critical_findings"].([]interface{}); ok {
+		content += "CRITICAL FINDINGS:\n"
+		for i, finding := range findings {
+			if findingMap, ok := finding.(map[string]interface{}); ok {
+				content += fmt.Sprintf("  %d. %s\n", i+1, findingMap["description"])
+				content += fmt.Sprintf("     Type: %s\n", findingMap["type"])
+				content += fmt.Sprintf("     Severity: %s\n", findingMap["severity"])
+				content += fmt.Sprintf("     Count: %.0f\n", findingMap["count"])
+				content += "\n"
+			}
+		}
+	}
+
+	// Recommendations
+	if recommendations, ok := dataMap["recommendations"].([]interface{}); ok {
+		content += "RECOMMENDATIONS:\n"
+		for i, rec := range recommendations {
+			if recMap, ok := rec.(map[string]interface{}); ok {
+				content += fmt.Sprintf("  %d. %s\n", i+1, recMap["action"])
+				content += fmt.Sprintf("     Priority: %s\n", recMap["priority"])
+				content += fmt.Sprintf("     Effort: %s, Impact: %s\n", recMap["effort"], recMap["impact"])
+				content += "\n"
+			}
+		}
+	}
+
+	return content
+}
+
+// formatRiskAssessmentAsCSV formats risk assessment data as CSV
+func (h *Handler) formatRiskAssessmentAsCSV(data interface{}) string {
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		return "Invalid data format\n"
+	}
+
+	var content strings.Builder
+	content.WriteString("Type,Description,Severity,Count,Priority,Action,Effort,Impact\n")
+
+	// Critical findings
+	if findings, ok := dataMap["critical_findings"].([]interface{}); ok {
+		for _, finding := range findings {
+			if findingMap, ok := finding.(map[string]interface{}); ok {
+				content.WriteString(fmt.Sprintf("Finding,%s,%s,%.0f,,,\n",
+					findingMap["description"], findingMap["severity"], findingMap["count"]))
+			}
+		}
+	}
+
+	// Recommendations
+	if recommendations, ok := dataMap["recommendations"].([]interface{}); ok {
+		for _, rec := range recommendations {
+			if recMap, ok := rec.(map[string]interface{}); ok {
+				content.WriteString(fmt.Sprintf("Recommendation,,,%s,%s,%s,%s\n",
+					recMap["priority"], recMap["action"], recMap["effort"], recMap["impact"]))
+			}
+		}
+	}
+
+	return content.String()
 }
