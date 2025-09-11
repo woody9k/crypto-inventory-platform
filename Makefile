@@ -37,22 +37,29 @@ build-services: ## Build all Go backend services
 
 build-sensor: ## Build cross-platform network sensor
 	@echo "Building network sensor..."
-	cd sensor && go build -o ../bin/crypto-sensor ./cmd/main.go
-	@echo "Building cross-platform binaries..."
-	cd sensor && GOOS=windows GOARCH=amd64 go build -o ../bin/crypto-sensor-windows-amd64.exe ./cmd/main.go
-	cd sensor && GOOS=linux GOARCH=amd64 go build -o ../bin/crypto-sensor-linux-amd64 ./cmd/main.go
-	cd sensor && GOOS=darwin GOARCH=amd64 go build -o ../bin/crypto-sensor-darwin-amd64 ./cmd/main.go
-	cd sensor && GOOS=linux GOARCH=arm64 go build -o ../bin/crypto-sensor-linux-arm64 ./cmd/main.go
+	cd sensor && CGO_ENABLED=1 go build -o ../bin/crypto-sensor ./cmd/main.go
+	@echo "Building cross-platform binaries (set CROSS=1 to enable)..."
+	@if [ "$(CROSS)" = "1" ]; then \
+		cd sensor && GOOS=windows GOARCH=amd64 CGO_ENABLED=1 go build -o ../bin/crypto-sensor-windows-amd64.exe ./cmd/main.go; \
+		cd sensor && GOOS=linux GOARCH=amd64 CGO_ENABLED=1 go build -o ../bin/crypto-sensor-linux-amd64 ./cmd/main.go; \
+		cd sensor && GOOS=darwin GOARCH=amd64 CGO_ENABLED=1 go build -o ../bin/crypto-sensor-darwin-amd64 ./cmd/main.go; \
+		cd sensor && GOOS=linux GOARCH=arm64 CGO_ENABLED=1 go build -o ../bin/crypto-sensor-linux-arm64 ./cmd/main.go; \
+	fi
 	@echo "Network sensor built successfully!"
 
 build-frontend: ## Build React frontend
 	@echo "Building frontend..."
-	cd web-ui && npm ci && npm run build
+	cd web-ui && npm install --no-fund --no-audit && npm run build
 	@echo "Frontend built successfully!"
 
 build-ai-service: ## Build AI analysis service
 	@echo "Building AI service..."
-	cd services/ai-analysis-service && pip install -r requirements.txt
+	cd services/ai-analysis-service && \
+		if [ -d .venv ]; then \
+			. .venv/bin/activate && python -m pip install --upgrade pip && python -m pip install -r requirements.txt; \
+		else \
+			python3 -m pip install --user --upgrade pip && python3 -m pip install --user -r requirements.txt; \
+		fi
 	@echo "AI service dependencies installed!"
 
 build-all: build-services build-sensor build-frontend build-ai-service ## Build all components

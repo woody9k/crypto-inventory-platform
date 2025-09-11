@@ -29,7 +29,26 @@ git clone <repository-url>
 cd crypto-inventory-platform
 ```
 
-2. **Start the platform**:
+2. **Install system dependencies** (if needed):
+```bash
+# For Ubuntu/Debian systems
+sudo apt-get update
+sudo apt-get install -y build-essential libpcap-dev python3 python3-pip python3-venv python3.12-venv
+```
+
+3. **Build the platform**:
+```bash
+# Build all services
+make build-all
+
+# Or build individually
+make build-services    # Go services
+make build-sensor      # Network sensor
+make build-frontend    # React UI
+make build-ai-service  # AI analysis service
+```
+
+4. **Start the platform**:
 ```bash
 # Start all services (including frontend)
 docker-compose up -d
@@ -38,9 +57,15 @@ docker-compose up -d
 docker-compose ps
 ```
 
+5. **Load sample data** (optional):
+```bash
+# Load comprehensive demo data for brian@debban.com
+docker-compose exec postgres psql -U crypto_user -d crypto_inventory -f /scripts/database/seed_brian_debban.sql
+```
+
 **Note**: The platform now runs entirely in Docker containers. The frontend is served by nginx on port 3000.
 
-3. **Access the platform**:
+6. **Access the platform**:
 - **Tenant Application (web-ui)**: http://localhost:3000
 - **Platform Admin UI (saas-admin-ui)**: http://localhost:3002
 - **API Gateway**: http://localhost:8080 (frontend calls go through here)
@@ -72,9 +97,14 @@ The platform includes a comprehensive reports system accessible at `/reports`:
 - **Analyst**: `analyst@democorp.com` / `admin123`  
 - **Viewer**: `viewer@democorp.com` / `admin123`
 
+**Tenant Users** (Debban Corporation - Sample Data):
+- **Admin**: `brian@debban.com` / `admin123`
+- **Analyst**: `sarah@debban.com` / `admin123`  
+- **Viewer**: `mike@debban.com` / `admin123`
+
 **Platform Admins**:
 - Email: `admin@crypto-inventory.com`
-- Password: `admin123`
+- Password: `admin123` (Note: Password hash needs to be updated in database)
 
 ## 🏗️ Architecture
 

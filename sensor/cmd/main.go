@@ -39,6 +39,9 @@ func main() {
 	)
 	flag.Parse()
 
+	// Silence unused flag until file-based config is implemented
+	_ = configFile
+
 	// Show version and exit
 	if *version {
 		fmt.Printf("Crypto Inventory Network Sensor v%s\n", Version)
@@ -312,6 +315,7 @@ func (s *Sensor) processCommand(command models.Command) {
 // handleUpdateConfigCommand handles configuration update commands
 func (s *Sensor) handleUpdateConfigCommand(command models.Command) {
 	if configData, ok := command.Payload["config"].(map[string]interface{}); ok {
+		_ = configData
 		// TODO: Parse and apply configuration updates
 		log.Printf("📝 Configuration update command received")
 	}
@@ -343,14 +347,6 @@ func (s *Sensor) handleStopCaptureCommand(command models.Command) {
 
 // acknowledgeCommand acknowledges a command to the control plane
 func (s *Sensor) acknowledgeCommand(command models.Command) {
-	response := models.CommandResponse{
-		CommandID: command.ID,
-		SensorID:  s.config.SensorID,
-		Status:    "success",
-		Message:   "Command processed successfully",
-		Timestamp: time.Now(),
-	}
-
 	// TODO: Send acknowledgment to control plane
 	log.Printf("✅ Acknowledged command: %s", command.ID)
 }

@@ -135,3 +135,86 @@ func (h *Handler) SubmitAirGappedExport(c *gin.Context) {
 		"records":   len(export.Data),
 	})
 }
+
+// SubmitDiscoveries handles submission of discovery batches from sensors
+func (h *Handler) SubmitDiscoveries(c *gin.Context) {
+	sensorID := c.Param("sensor_id")
+
+	var batch models.DiscoveryBatch
+	if err := c.ShouldBindJSON(&batch); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Validate sensor ID
+	if batch.SensorID != sensorID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Sensor ID mismatch"})
+		return
+	}
+
+	// TODO: Persist discoveries to database and enqueue processing jobs
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":   "success",
+		"message":  "Discoveries received",
+		"count":    len(batch.Discoveries),
+		"batch_id": batch.BatchID,
+	})
+}
+
+// ReportHealth handles legacy health reports from sensors
+func (h *Handler) ReportHealth(c *gin.Context) {
+	sensorID := c.Param("sensor_id")
+
+	var health models.SensorHealth
+	if err := c.ShouldBindJSON(&health); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if health.SensorID != sensorID {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Sensor ID mismatch"})
+		return
+	}
+
+	// TODO: Store health status and update last seen timestamp
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Health report received",
+	})
+}
+
+// GetSensorConfig returns configuration for a sensor (legacy endpoint)
+func (h *Handler) GetSensorConfig(c *gin.Context) {
+	sensorID := c.Param("sensor_id")
+
+	// TODO: Load sensor-specific configuration from database
+	// For now, return a sensible default config
+	config := models.SensorConfig{
+		ControlPlaneURL:   "https://crypto-inventory.company.com",
+		ReportingInterval: 60,
+		StorageConfig: models.StorageConfig{
+			MaxStorageSize: 10 * 1024 * 1024 * 1024, // 10 GB
+			RotationSize:   512 * 1024 * 1024,       // 512 MB
+			RetentionDays:  7,
+			EncryptionKey:  "",
+		},
+		CaptureConfig: models.CaptureConfig{
+			Interfaces:       []string{"eth0"},
+			ActiveProbing:    false,
+			NetworkDiscovery: false,
+			MaxConnections:   1000,
+			TimeoutSeconds:   30,
+		},
+		Features: map[string]bool{
+			"tls_analysis":         true,
+			"ssh_analysis":         true,
+			"certificate_analysis": true,
+		},
+	}
+
+	_ = sensorID // avoid unused warning for now until tied to DB lookup
+
+	c.JSON(http.StatusOK, config)
+}
