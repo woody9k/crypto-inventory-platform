@@ -60,6 +60,23 @@ CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_sso ON users(sso_provider, sso_external_id);
 ```
 
+### Billing (Provider-Agnostic)
+
+The platform supports multiple billing providers via a normalized schema, with Stripe as the initial adapter.
+
+Key tables:
+
+- `billing_providers` (id, key, display_name, is_active)
+- `billing_customers` (tenant_id, provider_id, external_customer_id, email, default_payment_method)
+- `billing_subscriptions` (tenant_id, provider_id, external_subscription_id, plan_key, status, current_period_start, current_period_end, cancel_at_period_end)
+- `billing_invoices` (tenant_id, provider_id, external_invoice_id, amount_cents, currency, status, issued_at, due_at, paid_at)
+- `billing_events` (provider_id, external_event_id, event_type, payload, received_at, processed_at)
+
+Subscription tier mapping:
+
+- `tenants.subscription_tier_id` references `subscription_tiers.id`
+- On webhook events, if `plan_key` maps to `subscription_tiers.name`, the tenant's tier is aligned accordingly.
+
 ### Network Discovery
 
 #### Network Assets Table
