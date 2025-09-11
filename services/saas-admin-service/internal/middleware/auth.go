@@ -89,3 +89,32 @@ func PlatformAdminMiddleware() gin.HandlerFunc {
 		c.Next()
 	}
 }
+
+// Authorize allows only the provided platform roles to access a specific route.
+// If the user's role is not in the allowed set, it returns 403.
+func Authorize(allowedRoles ...string) gin.HandlerFunc {
+	allowed := make(map[string]struct{}, len(allowedRoles))
+	for _, r := range allowedRoles {
+		allowed[r] = struct{}{}
+	}
+	return func(c *gin.Context) {
+		roleVal, exists := c.Get("role")
+		if !exists {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Role not found in token"})
+			c.Abort()
+			return
+		}
+		role, ok := roleVal.(string)
+		if !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Invalid role type"})
+			c.Abort()
+			return
+		}
+		if _, ok := allowed[role]; !ok {
+			c.JSON(http.StatusForbidden, gin.H{"error": "Insufficient permissions for this operation"})
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}

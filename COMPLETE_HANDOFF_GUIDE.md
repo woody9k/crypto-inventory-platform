@@ -347,7 +347,7 @@ curl -X POST http://localhost:8081/api/v1/auth/login \
 ### Future Enhancements
 
 1. **Advanced Analytics**: Platform-wide usage analytics
-2. **Billing Integration**: Stripe/payment processing
+2. **Billing Integration**: Provider-agnostic billing with Stripe adapter (admin endpoints, webhooks, UI)
 3. **Multi-Factor Authentication**: Enhanced security
 4. **API Rate Limiting**: Platform-wide rate limiting
 5. **Audit Logging**: Comprehensive audit trails

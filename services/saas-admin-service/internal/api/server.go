@@ -103,40 +103,111 @@ func (s *Server) setupRouter() {
 			// These endpoints allow platform admins to manage all tenants in the system
 			tenants := protected.Group("/tenants")
 			{
-				tenants.GET("", handlers.ListTenants(s.db))                  // List all tenants with pagination
-				tenants.GET("/:id", handlers.GetTenant(s.db))                // Get specific tenant details
-				tenants.POST("", handlers.CreateTenant(s.db))                // Create new tenant
-				tenants.PUT("/:id", handlers.UpdateTenant(s.db))             // Update tenant information
-				tenants.DELETE("/:id", handlers.DeleteTenant(s.db))          // Soft delete tenant
-				tenants.POST("/:id/suspend", handlers.SuspendTenant(s.db))   // Suspend tenant access
-				tenants.POST("/:id/activate", handlers.ActivateTenant(s.db)) // Activate tenant access
-				tenants.GET("/:id/stats", handlers.GetTenantStats(s.db))     // Get tenant statistics
+				// Read-only: super_admin, platform_admin, support_admin
+				readTenants := tenants.Group("")
+				readTenants.Use(middleware.Authorize("super_admin", "platform_admin", "support_admin"))
+				{
+					readTenants.GET("", handlers.ListTenants(s.db))                  // List all tenants with pagination
+					readTenants.GET("/:id", handlers.GetTenant(s.db))                // Get specific tenant details
+					readTenants.GET("/:id/stats", handlers.GetTenantStats(s.db))     // Get tenant statistics
+					readTenants.GET("/:id/billing", handlers.GetTenantBilling(s.db)) // Billing overview for a tenant
+				}
+
+				// Create/Update/Suspend/Activate: super_admin, platform_admin
+				manageTenants := tenants.Group("")
+				manageTenants.Use(middleware.Authorize("super_admin", "platform_admin"))
+				{
+					manageTenants.POST("", handlers.CreateTenant(s.db))
+					manageTenants.PUT("/:id", handlers.UpdateTenant(s.db))
+					manageTenants.POST("/:id/suspend", handlers.SuspendTenant(s.db))
+					manageTenants.POST("/:id/activate", handlers.ActivateTenant(s.db))
+					manageTenants.PUT("/:id/billing", handlers.UpdateTenantBilling(s.db)) // Update plan or cancel/reactivate
+				}
+
+				// Delete: super_admin only
+				deleteTenants := tenants.Group("")
+				deleteTenants.Use(middleware.Authorize("super_admin"))
+				{
+					deleteTenants.DELETE("/:id", handlers.DeleteTenant(s.db))
+				}
 			}
 
 			// Platform user management endpoints - Manage SaaS administrators
 			// These endpoints allow management of platform-level users (not tenant users)
 			users := protected.Group("/users")
 			{
-				users.GET("", handlers.ListPlatformUsers(s.db))         // List all platform users
-				users.GET("/:id", handlers.GetPlatformUser(s.db))       // Get specific platform user
-				users.POST("", handlers.CreatePlatformUser(s.db))       // Create new platform user
-				users.PUT("/:id", handlers.UpdatePlatformUser(s.db))    // Update platform user
-				users.DELETE("/:id", handlers.DeletePlatformUser(s.db)) // Delete platform user
+				// Read: super_admin, platform_admin, support_admin
+				readUsers := users.Group("")
+				readUsers.Use(middleware.Authorize("super_admin", "platform_admin", "support_admin"))
+				{
+					readUsers.GET("", handlers.ListPlatformUsers(s.db))
+					readUsers.GET("/:id", handlers.GetPlatformUser(s.db))
+				}
+
+				// Create/Update: super_admin, platform_admin
+				manageUsers := users.Group("")
+				manageUsers.Use(middleware.Authorize("super_admin", "platform_admin"))
+				{
+					manageUsers.POST("", handlers.CreatePlatformUser(s.db))
+					manageUsers.PUT("/:id", handlers.UpdatePlatformUser(s.db))
+				}
+
+				// Delete: super_admin only
+				deleteUsers := users.Group("")
+				deleteUsers.Use(middleware.Authorize("super_admin"))
+				{
+					deleteUsers.DELETE("/:id", handlers.DeletePlatformUser(s.db))
+				}
+			}
+
+			// Billing endpoints (admin-wide)
+			billing := protected.Group("/billing")
+			{
+				// Invoices listing: super_admin, platform_admin (read-only)
+				listInvoices := billing.Group("")
+				listInvoices.Use(middleware.Authorize("super_admin", "platform_admin"))
+				{
+					listInvoices.GET("/invoices", handlers.ListInvoices(s.db))
+				}
+
+				// Credits issuance: super_admin only
+				credits := billing.Group("")
+				credits.Use(middleware.Authorize("super_admin"))
+				{
+					credits.POST("/credits", func(c *gin.Context) {
+						c.JSON(http.StatusAccepted, gin.H{"message": "Credit issuance scheduled"})
+					})
+				}
+
+				// Provider-agnostic webhook (no auth, separate route group)
 			}
 
 			// Platform roles and permissions endpoints - RBAC management
 			// These endpoints manage platform-level roles and permissions
 			roles := protected.Group("/roles")
 			{
-				roles.GET("", handlers.ListPlatformRoles(s.db))         // List all platform roles
-				roles.GET("/:id", handlers.GetPlatformRole(s.db))       // Get specific platform role
-				roles.POST("", handlers.CreatePlatformRole(s.db))       // Create new platform role
-				roles.PUT("/:id", handlers.UpdatePlatformRole(s.db))    // Update platform role
-				roles.DELETE("/:id", handlers.DeletePlatformRole(s.db)) // Delete platform role
+				// Read: super_admin, platform_admin, support_admin
+				readRoles := roles.Group("")
+				readRoles.Use(middleware.Authorize("super_admin", "platform_admin", "support_admin"))
+				{
+					readRoles.GET("", handlers.ListPlatformRoles(s.db))
+					readRoles.GET("/:id", handlers.GetPlatformRole(s.db))
+				}
+
+				// Create/Update/Delete: super_admin only
+				writeRoles := roles.Group("")
+				writeRoles.Use(middleware.Authorize("super_admin"))
+				{
+					writeRoles.POST("", handlers.CreatePlatformRole(s.db))
+					writeRoles.PUT("/:id", handlers.UpdatePlatformRole(s.db))
+					writeRoles.DELETE("/:id", handlers.DeletePlatformRole(s.db))
+				}
 			}
 
 			permissions := protected.Group("/permissions")
 			{
+				// Read: super_admin, platform_admin, support_admin
+				permissions.Use(middleware.Authorize("super_admin", "platform_admin", "support_admin"))
 				permissions.GET("", handlers.ListPlatformPermissions(s.db))   // List all platform permissions
 				permissions.GET("/:id", handlers.GetPlatformPermission(s.db)) // Get specific platform permission
 			}
@@ -145,6 +216,7 @@ func (s *Server) setupRouter() {
 			// These endpoints provide insights into platform usage and performance
 			stats := protected.Group("/stats")
 			{
+				stats.Use(middleware.Authorize("super_admin", "platform_admin", "support_admin"))
 				stats.GET("/platform", handlers.GetPlatformStats(s.db)) // Platform-wide statistics
 				stats.GET("/tenants", handlers.GetTenantsStats(s.db))   // All tenants statistics
 			}
@@ -153,9 +225,16 @@ func (s *Server) setupRouter() {
 			// These endpoints provide system health and monitoring capabilities
 			monitoring := protected.Group("/monitoring")
 			{
+				monitoring.Use(middleware.Authorize("super_admin", "platform_admin", "support_admin"))
 				monitoring.GET("/health", handlers.GetSystemHealth(s.db)) // System health check
 				monitoring.GET("/logs", handlers.GetSystemLogs(s.db))     // System logs (future)
 			}
+		}
+
+		// Provider-agnostic webhook (public path; provider handles verification)
+		billingWebhook := api.Group("/admin/billing/webhook")
+		{
+			billingWebhook.POST(":provider", handlers.BillingWebhook(s.db))
 		}
 	}
 }

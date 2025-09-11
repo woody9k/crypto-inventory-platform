@@ -5,18 +5,20 @@ import (
 )
 
 type Config struct {
-	Port        string
-	DatabaseURL string
-	JWTSecret   string
-	Environment string
+	Port                string
+	DatabaseURL         string
+	JWTSecret           string
+	Environment         string
+	StripeWebhookSecret string
 }
 
 func Load() *Config {
 	return &Config{
-		Port:        getEnv("PORT", "8084"),
-		DatabaseURL: getEnv("DATABASE_URL", "postgres://crypto_user:crypto_pass_dev@localhost:5432/crypto_inventory?sslmode=disable"),
-		JWTSecret:   getEnv("JWT_SECRET", "your-super-secret-jwt-key-change-in-production"),
-		Environment: getEnv("ENVIRONMENT", "development"),
+		Port:                getEnv("PORT", "8084"),
+		DatabaseURL:         getEnv("DATABASE_URL", "postgres://crypto_user:crypto_pass_dev@localhost:5432/crypto_inventory?sslmode=disable"),
+		JWTSecret:           getEnv("JWT_SECRET", "your-super-secret-jwt-key-change-in-production"),
+		Environment:         getEnv("ENVIRONMENT", "development"),
+		StripeWebhookSecret: getEnv("STRIPE_WEBHOOK_SECRET", "change-me"),
 	}
 }
 

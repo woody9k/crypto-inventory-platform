@@ -82,4 +82,18 @@ export const tenantsApi = {
     const response = await api.get('/admin/stats/tenants');
     return response.data;
   },
+
+  // Billing
+  getTenantBilling: async (id: string): Promise<{ billing: any }> => {
+    const response = await api.get(`/admin/tenants/${id}/billing`);
+    return response.data;
+  },
+
+  updateTenantBilling: async (
+    id: string,
+    payload: { action: 'change_plan' | 'cancel' | 'resume'; plan_key?: string; cancel_at_period_end?: boolean }
+  ): Promise<{ message: string }> => {
+    const response = await api.put(`/admin/tenants/${id}/billing`, payload);
+    return response.data;
+  },
 };

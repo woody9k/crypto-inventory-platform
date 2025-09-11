@@ -188,17 +188,26 @@ INSERT INTO platform_permissions (name, resource, action, description) VALUES
 ('tenants.update', 'tenants', 'update', 'Update tenant settings'),
 ('tenants.delete', 'tenants', 'delete', 'Delete tenants'),
 ('tenants.manage', 'tenants', 'manage', 'Full tenant management'),
+('tenants.suspend', 'tenants', 'update', 'Suspend tenants'),
+('tenants.activate', 'tenants', 'update', 'Activate/reactivate tenants'),
 
 -- Platform user management
 ('platform_users.create', 'platform_users', 'create', 'Create platform users'),
 ('platform_users.read', 'platform_users', 'read', 'View platform users'),
 ('platform_users.update', 'platform_users', 'update', 'Update platform users'),
 ('platform_users.delete', 'platform_users', 'delete', 'Delete platform users'),
+('platform_roles.assign', 'platform_roles', 'manage', 'Assign platform roles to platform users'),
+('tenant_roles.assign', 'tenant_roles', 'manage', 'Assign tenant roles across tenants'),
 
 -- Platform settings
 ('platform.settings', 'platform', 'manage', 'Manage platform settings'),
 ('platform.billing', 'platform', 'manage', 'Manage platform billing'),
 ('platform.analytics', 'platform', 'read', 'View platform analytics'),
+('platform.health', 'platform', 'read', 'View platform health and monitoring dashboards'),
+('platform.logs', 'platform', 'read', 'View platform logs'),
+('platform.logs.manage', 'platform', 'manage', 'Manage platform logging configuration'),
+('platform.audit', 'platform', 'read', 'View platform audit logs'),
+('platform.override', 'platform', 'manage', 'Override permissions in exceptional cases'),
 
 -- Support access
 ('support.tenants', 'tenants', 'read', 'View tenant data for support'),
@@ -218,7 +227,14 @@ INSERT INTO platform_role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM platform_roles r, platform_permissions p
 WHERE r.name = 'platform_admin' 
-  AND p.name NOT IN ('platform_users.delete', 'tenants.delete')
+  AND p.name NOT IN (
+    'platform_users.delete',
+    'tenants.delete',
+    'platform.billing',
+    'platform.settings',
+    'platform.logs.manage',
+    'platform.override'
+  )
 ON CONFLICT (role_id, permission_id) DO NOTHING;
 
 -- Support Admin gets read-only access

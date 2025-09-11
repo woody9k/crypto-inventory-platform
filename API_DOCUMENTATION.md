@@ -410,6 +410,50 @@ Activate a tenant.
 }
 ```
 
+#### GET /api/v1/admin/tenants/:id/billing
+Get tenant billing overview.
+
+**Headers**: `Authorization: Bearer <token>`
+
+**Response** (200 OK):
+```json
+{
+  "billing": {
+    "customers": [
+      { "provider": "stripe", "provider_name": "Stripe", "customer_id": "cus_123" }
+    ],
+    "subscriptions": [
+      {
+        "provider": "stripe",
+        "subscription_id": "sub_123",
+        "plan": "professional",
+        "status": "active",
+        "current_period_start": "2025-01-09T10:00:00Z",
+        "current_period_end": "2025-02-09T10:00:00Z"
+      }
+    ]
+  }
+}
+```
+
+#### PUT /api/v1/admin/tenants/:id/billing
+Update tenant billing (change plan or toggle cancel at period end).
+
+**Headers**: `Authorization: Bearer <token>`
+**Request Body**:
+```json
+{
+  "action": "change_plan",
+  "plan_key": "enterprise",
+  "cancel_at_period_end": false
+}
+```
+
+**Response** (202 Accepted):
+```json
+{ "message": "Billing update scheduled" }
+```
+
 #### GET /api/v1/admin/tenants/:id/stats
 Get tenant statistics.
 

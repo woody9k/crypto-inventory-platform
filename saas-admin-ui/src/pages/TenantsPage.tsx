@@ -11,9 +11,11 @@ import {
   PlayIcon,
   PauseIcon,
 } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
 
 const TenantsPage: React.FC = () => {
   const [page, setPage] = useState(1);
+  const navigate = useNavigate();
   const [selectedTenant, setSelectedTenant] = useState<Tenant | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const queryClient = useQueryClient();
@@ -171,6 +173,13 @@ const TenantsPage: React.FC = () => {
                           title="View Details"
                         >
                           <EyeIcon className="h-4 w-4" />
+                        </button>
+                        <button
+                          onClick={() => navigate(`/tenants/${tenant.id}/billing`)}
+                          className="text-indigo-600 hover:text-indigo-900"
+                          title="Billing"
+                        >
+                          Billing
                         </button>
                         <button
                           onClick={() => setSelectedTenant(tenant)}
