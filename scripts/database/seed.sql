@@ -86,22 +86,33 @@ INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, r
 (
     '550e8400-e29b-41d4-a716-446655440002',
     (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
-    'analyst@democorp.com',
-    'Security',
-    'Analyst',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMye/D7zrZI/PCMZ6qO8PQ8DbZOF5.XzEQm', -- password: admin123
-    'analyst',
+    'user@democorp.com',
+    'Regular',
+    'User',
+    '$argon2id$v=19$m=65536,t=3,p=4$rQc8+9Qv8Qv8Qv8Qv8Qv8Q$rQc8+9Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Q', -- password: password1
+    'user',
     true,
     true
 ),
 (
     '550e8400-e29b-41d4-a716-446655440003',
     (SELECT id FROM tenants WHERE slug = 'demo-corp' LIMIT 1),
-    'viewer@democorp.com',
-    'Read Only',
-    'User',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMye/D7zrZI/PCMZ6qO8PQ8DbZOF5.XzEQm', -- password: admin123
-    'viewer',
+    'admin@democorp.com',
+    'Tenant',
+    'Admin',
+    '$argon2id$v=19$m=65536,t=3,p=4$rQc8+9Qv8Qv8Qv8Qv8Qv8Q$rQc8+9Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Q', -- password: password1
+    'admin',
+    true,
+    true
+),
+(
+    '550e8400-e29b-41d4-a716-446655440004',
+    NULL, -- Platform admin has no tenant
+    'admin@vista.com',
+    'Platform',
+    'Admin',
+    '$argon2id$v=19$m=65536,t=3,p=4$rQc8+9Qv8Qv8Qv8Qv8Qv8Q$rQc8+9Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Q', -- password: password1
+    'platform_admin',
     true,
     true
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
