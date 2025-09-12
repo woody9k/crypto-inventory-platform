@@ -515,7 +515,7 @@ VALUES (
     'Admin',
     'User',
     'admin',
-    '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LeKOcn4QwYqZt1.nq' -- password: "password123" - NOTE: This will be updated to Argon2id format by the auth service
+    '$argon2id$v=19$m=65536,t=3,p=2$8Ll1hG8Y7AO+m8hQxRuozA$nO6gHyQ3JAccN5XWX5gjdnxTx+XutgIHYGCuXpJ2LKQ' -- password: "Password123!"
 );
 
 -- Add password auth method for demo user

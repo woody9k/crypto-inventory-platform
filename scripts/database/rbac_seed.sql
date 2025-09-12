@@ -158,7 +158,7 @@ INSERT INTO platform_users (id, email, password_hash, first_name, last_name, rol
 SELECT 
     '00000000-0000-0000-0000-000000000001',
     'admin@crypto-inventory.com',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMye/D7zrZI/PCMZ6qO8PQ8DbZOF5.XzEQm',
+    '$argon2id$v=19$m=65536,t=3,p=2$8Ll1hG8Y7AO+m8hQxRuozA$nO6gHyQ3JAccN5XWX5gjdnxTx+XutgIHYGCuXpJ2LKQ', -- password: Password123!
     'Platform',
     'Administrator',
     pr.id,

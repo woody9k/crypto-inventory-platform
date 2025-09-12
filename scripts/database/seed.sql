@@ -89,8 +89,8 @@ INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, r
     'user@democorp.com',
     'Regular',
     'User',
-    '$argon2id$v=19$m=65536,t=3,p=4$rQc8+9Qv8Qv8Qv8Qv8Qv8Q$rQc8+9Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Q', -- password: password1
-    'user',
+    '$argon2id$v=19$m=65536,t=3,p=2$8Ll1hG8Y7AO+m8hQxRuozA$nO6gHyQ3JAccN5XWX5gjdnxTx+XutgIHYGCuXpJ2LKQ', -- password: Password123!
+    'viewer',
     true,
     true
 ),
@@ -100,22 +100,13 @@ INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, r
     'admin@democorp.com',
     'Tenant',
     'Admin',
-    '$argon2id$v=19$m=65536,t=3,p=4$rQc8+9Qv8Qv8Qv8Qv8Qv8Q$rQc8+9Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Q', -- password: password1
+    '$argon2id$v=19$m=65536,t=3,p=2$8Ll1hG8Y7AO+m8hQxRuozA$nO6gHyQ3JAccN5XWX5gjdnxTx+XutgIHYGCuXpJ2LKQ', -- password: Password123!
     'admin',
     true,
     true
-),
-(
-    '550e8400-e29b-41d4-a716-446655440004',
-    NULL, -- Platform admin has no tenant
-    'admin@vista.com',
-    'Platform',
-    'Admin',
-    '$argon2id$v=19$m=65536,t=3,p=4$rQc8+9Qv8Qv8Qv8Qv8Qv8Q$rQc8+9Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Qv8Q', -- password: password1
-    'platform_admin',
-    true,
-    true
 ) ON CONFLICT (tenant_id, email) DO NOTHING;
+
+-- Platform admin will be created in 06-rbac-seed.sql after platform_users table exists
 
 -- =================================================================
 -- Demo Network Assets

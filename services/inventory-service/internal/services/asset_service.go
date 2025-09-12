@@ -11,6 +11,7 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
 	"inventory-service/internal/database"
 	"inventory-service/internal/models"
@@ -37,11 +38,12 @@ func NewAssetService(db *database.DB) *AssetService {
 // - Sorting by risk score, discovery date, or custom fields
 func (s *AssetService) GetAssets(tenantID uuid.UUID, filters models.AssetFilters) ([]models.Asset, int, error) {
 	// Build the base query with tenant isolation and risk scoring
+	// Note: Cast JSONB fields to text to avoid Go scanning issues with PostgreSQL JSONB types
 	baseQuery := `
 		SELECT 
 			a.id, a.tenant_id, a.hostname, a.ip_address, a.port, a.asset_type,
 			a.operating_system, a.environment, a.business_unit, a.owner_email,
-			a.description, a.tags, a.metadata, a.first_discovered_at, a.last_seen_at,
+			a.description, a.tags::text, a.metadata::text, a.first_discovered_at, a.last_seen_at,
 			a.created_at, a.updated_at, a.deleted_at,
 			COALESCE(MAX(ci.risk_score), 0) as highest_risk
 		FROM network_assets a
@@ -158,16 +160,37 @@ func (s *AssetService) GetAssets(tenantID uuid.UUID, filters models.AssetFilters
 	for rows.Next() {
 		var asset models.Asset
 		var highestRisk *int
+		var tagsText, metadataText string
 
 		err := rows.Scan(
 			&asset.ID, &asset.TenantID, &asset.Hostname, &asset.IPAddress, &asset.Port,
 			&asset.AssetType, &asset.OperatingSystem, &asset.Environment, &asset.BusinessUnit,
-			&asset.OwnerEmail, &asset.Description, &asset.Tags, &asset.Metadata,
+			&asset.OwnerEmail, &asset.Description, &tagsText, &metadataText,
 			&asset.FirstDiscoveredAt, &asset.LastSeenAt, &asset.CreatedAt, &asset.UpdatedAt,
 			&asset.DeletedAt, &highestRisk,
 		)
 		if err != nil {
 			return nil, 0, fmt.Errorf("failed to scan asset: %w", err)
+		}
+
+		// Parse JSON fields from PostgreSQL JSONB columns
+		// PostgreSQL returns JSONB as text, so we need to unmarshal it manually
+		if tagsText != "" {
+			if err := json.Unmarshal([]byte(tagsText), &asset.Tags); err != nil {
+				// If JSON parsing fails, initialize as empty map to prevent nil pointer errors
+				asset.Tags = make(map[string]interface{})
+			}
+		} else {
+			asset.Tags = make(map[string]interface{})
+		}
+		
+		if metadataText != "" {
+			if err := json.Unmarshal([]byte(metadataText), &asset.Metadata); err != nil {
+				// If JSON parsing fails, initialize as empty map to prevent nil pointer errors
+				asset.Metadata = make(map[string]interface{})
+			}
+		} else {
+			asset.Metadata = make(map[string]interface{})
 		}
 
 		// Set risk information
@@ -199,21 +222,46 @@ func (s *AssetService) GetAssets(tenantID uuid.UUID, filters models.AssetFilters
 
 // GetAssetByID retrieves a single asset with its crypto implementations
 func (s *AssetService) GetAssetByID(tenantID, assetID uuid.UUID) (*models.Asset, error) {
-	// Get the asset
+	// Get the asset with JSONB fields cast to text for proper Go scanning
 	query := `
 		SELECT 
 			id, tenant_id, hostname, ip_address, port, asset_type,
 			operating_system, environment, business_unit, owner_email,
-			description, tags, metadata, first_discovered_at, last_seen_at,
+			description, tags::text, metadata::text, first_discovered_at, last_seen_at,
 			created_at, updated_at, deleted_at
 		FROM network_assets 
 		WHERE id = $1 AND tenant_id = $2 AND deleted_at IS NULL
 	`
 
 	var asset models.Asset
-	err := s.db.Get(&asset, query, assetID, tenantID)
+	var tagsText, metadataText string
+
+	err := s.db.QueryRow(query, assetID, tenantID).Scan(
+		&asset.ID, &asset.TenantID, &asset.Hostname, &asset.IPAddress, &asset.Port,
+		&asset.AssetType, &asset.OperatingSystem, &asset.Environment, &asset.BusinessUnit,
+		&asset.OwnerEmail, &asset.Description, &tagsText, &metadataText,
+		&asset.FirstDiscoveredAt, &asset.LastSeenAt, &asset.CreatedAt, &asset.UpdatedAt,
+		&asset.DeletedAt,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get asset: %w", err)
+	}
+
+	// Parse JSON fields
+	if tagsText != "" {
+		if err := json.Unmarshal([]byte(tagsText), &asset.Tags); err != nil {
+			asset.Tags = make(map[string]interface{})
+		}
+	} else {
+		asset.Tags = make(map[string]interface{})
+	}
+
+	if metadataText != "" {
+		if err := json.Unmarshal([]byte(metadataText), &asset.Metadata); err != nil {
+			asset.Metadata = make(map[string]interface{})
+		}
+	} else {
+		asset.Metadata = make(map[string]interface{})
 	}
 
 	// Get crypto implementations

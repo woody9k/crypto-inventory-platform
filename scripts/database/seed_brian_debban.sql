@@ -29,7 +29,7 @@ INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, r
     'brian@debban.com',
     'Brian',
     'Debban',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMye/D7zrZI/PCMZ6qO8PQ8DbZOF5.XzEQm', -- password: admin123
+    '$argon2id$v=19$m=65536,t=3,p=2$8Ll1hG8Y7AO+m8hQxRuozA$nO6gHyQ3JAccN5XWX5gjdnxTx+XutgIHYGCuXpJ2LKQ', -- password: Password123!
     'admin',
     true,
     true,
@@ -45,7 +45,7 @@ INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, r
     'sarah@debban.com',
     'Sarah',
     'Johnson',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMye/D7zrZI/PCMZ6qO8PQ8DbZOF5.XzEQm', -- password: admin123
+    '$argon2id$v=19$m=65536,t=3,p=2$8Ll1hG8Y7AO+m8hQxRuozA$nO6gHyQ3JAccN5XWX5gjdnxTx+XutgIHYGCuXpJ2LKQ', -- password: Password123!
     'analyst',
     true,
     true,
@@ -58,7 +58,7 @@ INSERT INTO users (id, tenant_id, email, first_name, last_name, password_hash, r
     'mike@debban.com',
     'Mike',
     'Chen',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMye/D7zrZI/PCMZ6qO8PQ8DbZOF5.XzEQm', -- password: admin123
+    '$argon2id$v=19$m=65536,t=3,p=2$8Ll1hG8Y7AO+m8hQxRuozA$nO6gHyQ3JAccN5XWX5gjdnxTx+XutgIHYGCuXpJ2LKQ', -- password: Password123!
     'viewer',
     true,
     true,

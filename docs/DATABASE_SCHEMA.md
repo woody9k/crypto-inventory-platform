@@ -284,6 +284,22 @@ docker-compose exec postgres psql -U crypto_user -d crypto_inventory -f /scripts
 docker-compose exec postgres psql -U crypto_user -d crypto_inventory -f /scripts/database/seed.sql
 ```
 
+### Default Credentials
+
+All seed data uses the password `Password123!` which meets the strong password requirements:
+- Uppercase letters
+- Lowercase letters  
+- Numbers
+- Special characters
+
+**Tenant Users:**
+- `admin@democorp.com` / `Password123!`
+- `user@democorp.com` / `Password123!`
+
+**Platform Users:**
+- `admin@crypto-inventory.com` / `Password123!`
+- `admin@vista.com` / `Password123!`
+
 ### Database Maintenance
 
 ```bash

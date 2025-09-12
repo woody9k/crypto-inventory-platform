@@ -158,7 +158,7 @@ INSERT INTO platform_users (id, email, password_hash, first_name, last_name, rol
 SELECT 
     '00000000-0000-0000-0000-000000000001',
     'admin@crypto-inventory.com',
-    '$2a$10$N9qo8uLOickgx2ZMRZoMye/D7zrZI/PCMZ6qO8PQ8DbZOF5.XzEQm',
+    '$argon2id$v=19$m=65536,t=3,p=2$8Ll1hG8Y7AO+m8hQxRuozA$nO6gHyQ3JAccN5XWX5gjdnxTx+XutgIHYGCuXpJ2LKQ', -- password: Password123!
     'Platform',
     'Administrator',
     pr.id,
@@ -166,6 +166,22 @@ SELECT
     true
 FROM platform_roles pr
 WHERE pr.name = 'super_admin'
+ON CONFLICT (email) DO NOTHING;
+
+-- Create our custom platform admin user
+-- Password: 'password1' (hashed with Argon2id)
+INSERT INTO platform_users (id, email, password_hash, first_name, last_name, role_id, is_active, email_verified)
+SELECT 
+    '550e8400-e29b-41d4-a716-446655440004',
+    'admin@vista.com',
+    '$argon2id$v=19$m=65536,t=3,p=2$8Ll1hG8Y7AO+m8hQxRuozA$nO6gHyQ3JAccN5XWX5gjdnxTx+XutgIHYGCuXpJ2LKQ', -- password: Password123!
+    'Platform',
+    'Admin',
+    pr.id,
+    true,
+    true
+FROM platform_roles pr
+WHERE pr.name = 'platform_admin'
 ON CONFLICT (email) DO NOTHING;
 
 -- =================================================================

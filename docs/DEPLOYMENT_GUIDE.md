@@ -40,6 +40,22 @@ This guide covers building, deploying, and troubleshooting the Crypto Inventory 
    docker-compose exec postgres psql -U crypto_user -d crypto_inventory -f /scripts/database/seed_brian_debban.sql
    ```
 
+## 🔐 Default Credentials
+
+### Tenant Users (Customer Portal)
+- **Admin**: `admin@democorp.com` / `Password123!`
+- **Viewer**: `user@democorp.com` / `Password123!`
+
+### Platform Users (Admin Console)
+- **Platform Admin**: `admin@crypto-inventory.com` / `Password123!`
+- **Platform Admin**: `admin@vista.com` / `Password123!`
+
+### Demo Data (Brian Debban)
+- **Admin**: `brian@debban.com` / `Password123!`
+- **Analyst**: `sarah@debban.com` / `Password123!`
+
+**Note**: All passwords use the strong password policy requiring uppercase, lowercase, numbers, and special characters.
+
 ## 🔧 Build Process
 
 ### Makefile Targets
@@ -349,6 +365,80 @@ FROM pg_tables WHERE schemaname = 'public' ORDER BY pg_total_relation_size(schem
    # Update system packages
    sudo apt-get update && sudo apt-get upgrade
    ```
+
+## 🔧 Troubleshooting
+
+### Common Issues
+
+#### 1. Assets Page Empty
+**Problem**: Assets page shows no data despite having assets in database.
+
+**Solution**: This is usually caused by JSONB field scanning issues in the inventory service.
+```bash
+# Check inventory service logs
+docker logs crypto-inventory-service --tail=20
+
+# Verify assets exist in database
+docker-compose exec postgres psql -U crypto_user -d crypto_inventory -c "SELECT COUNT(*) FROM network_assets;"
+
+# Restart inventory service
+docker-compose restart inventory-service
+```
+
+#### 2. Login Credentials Not Working
+**Problem**: Cannot login with default credentials.
+
+**Solution**: Ensure you're using the correct password format.
+- All passwords must be: `Password123!` (uppercase, lowercase, numbers, special chars)
+- Check if you're using the right email/tenant combination
+
+#### 3. Database Connection Issues
+**Problem**: Services can't connect to database.
+
+**Solution**:
+```bash
+# Check database status
+docker-compose exec postgres pg_isready -U crypto_user -d crypto_inventory
+
+# Check database logs
+docker logs crypto-postgres --tail=20
+
+# Restart database
+docker-compose restart postgres
+```
+
+#### 4. Service Health Check Failures
+**Problem**: Services report unhealthy status.
+
+**Solution**:
+```bash
+# Check all service health
+docker-compose ps
+
+# Check specific service logs
+docker logs <service-name> --tail=50
+
+# Restart specific service
+docker-compose restart <service-name>
+```
+
+### Debug Commands
+
+```bash
+# Check all containers
+docker-compose ps
+
+# View logs for all services
+docker-compose logs --tail=20
+
+# Check resource usage
+docker stats --no-stream
+
+# Test API endpoints
+curl -s http://localhost:8081/health
+curl -s http://localhost:8082/health
+curl -s http://localhost:8084/health
+```
 
 ## 🆘 Support
 
